@@ -3,7 +3,7 @@ import os
 from PIL import Image
 import json
 
-EMOJI_DIRS = ["apple_64", "facebook_64", "google_64", "twitter_64", "wechat_64"]
+EMOJI_DIRS = ["apple_64", "facebook_64", "google_64", "twitter_64"]
 
 def load_image(name):
     '''
@@ -39,11 +39,11 @@ def move_to_one_folder(output_dir, emoji_dirs):
             index_json[img_count] = new_img_name
             img_count += 1
 
-    with open(os.path.join(output_dir, 'index.json'), 'w') as fp:
+    with open('index.json', 'w') as fp:
         json.dump(index_json, fp)
 
 
 if __name__ == "__main__":
     apple_emoji = load_image('apple_64')
-    move_to_one_folder("all_emojis", EMOJI_DIRS[0:4]) # currently not using wechat emojis since they are much smaller
+    move_to_one_folder("emojis_root/all_emojis", EMOJI_DIRS[0:4]) # currently not using wechat emojis since they are much smaller
 
