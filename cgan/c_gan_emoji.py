@@ -10,8 +10,6 @@ from torchvision import transforms as transforms, utils as tv_ut
 from torch.utils.data import random_split
 import os
 import argparse
-from embeddings.glove_loader import GloveModel
-
 
 class CGan_Trainer():
     def __init__(self, csv_file="images_descriptions.csv", batch_size=32, device='cpu'):
@@ -38,9 +36,12 @@ class CGan_Trainer():
         if not os.path.exists(self.save_model_path):
             os.mkdir(self.save_model_path)
 
+        self.val_output_dir = "./val_output"
+        self.train_output_dir = "./train_output"
+
     def train(self, epochs, save_interval=20):
         # Split data into train and validation set
-        train_samples = int(round(len(self.dataset)*0.95))
+        train_samples = int(round(len(self.dataset)*0.90))
         train_set, val_set = random_split(self.dataset, [train_samples, len(self.dataset) - train_samples])
         train_loader = DataLoader(train_set, batch_size=self.batch_size, shuffle=True)
         val_loader = DataLoader(val_set, batch_size=self.batch_size, shuffle=False)
@@ -87,22 +88,26 @@ class CGan_Trainer():
 
                 # Output training stats
                 print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\t'
-                      % (epoch, epochs, i, len(train_loader),
+                      % (epoch, epochs, i, len(train_loader) - 1,
                          errD.item(), errG.item()))
 
             if epoch % save_interval == 0 or epoch == epochs-1:
                 # Show progress on training set
-                self.generate_images(captions, output_name="emojis" + str(epoch) + ".png")
+                self.generate_images(captions,
+                                     output_path=os.path.join(self.train_output_dir, "emojis" + str(epoch) + ".png"))
                 self.save_model(gen_weights_path=os.path.join(self.save_model_path, "gen_weights" + str(epoch) + ".pt"),
                                 dis_weights_path=os.path.join(self.save_model_path, "dis_weights" + str(epoch) + ".pt"))
+
                 # Check performance on validation set
                 for i, data in enumerate(val_loader):
                     val_imgs, val_captions = data
                     val_captions = val_captions.to(device)
                     val_imgs = val_imgs.to(device)
-                    self.generate_images(val_captions,
-                                         output_name="val_emojis_fake" + str(i) + "_" + str(epoch) + ".png")
-                    save_image_batch(val_imgs, "val_emojis_real_" + str(i) + "_" + str(epoch) + ".png")
+                    self.generate_images(val_captions, output_path=os.path.join(self.val_output_dir, "val_emojis_fake" + str(epoch) + "_" + str(i) + ".png"))
+                    # Save real images from validation set for comparison
+                    real_imgs_path = os.path.join(self.val_output_dir, "val_emojis_real" + str(i) + "_.png")
+                    if not os.path.exists(real_imgs_path):
+                        save_image_batch(val_imgs, output_path=real_imgs_path)
 
     def load_model(self, gen_weights_path, dis_weights_path):
         self.generator.load_state_dict(torch.load(gen_weights_path))
@@ -112,45 +117,31 @@ class CGan_Trainer():
         torch.save(self.generator.state_dict(), gen_weights_path)
         torch.save(self.discriminator.state_dict(), dis_weights_path)
 
-    def generate_images(self, cond, x_in=None, output_name="generated_emojis.png"):
+    def generate_images(self, cond, output_path, x_in=None):
         if x_in is None:
             x_in = torch.randn(len(cond), 1, self.latent_dim).to(self.device)
         cond = cond.to(self.device)
         self.generator.eval()
         with torch.no_grad():
             output = self.generator(x_in, cond)
-            save_image_batch(output.detach(), name=output_name)
+            save_image_batch(output.detach(), output_path)
         self.generator.train()
 
+    def inference(self, caption_file):
+        self.discriminator.to(self.device)
+        self.generator.to(self.device)
+        captions = load_captions_from_textfile(caption_file)
+        glove_model = self.dataset.glove_model
+        captions = torch.Tensor([glove_model.encode_docs([c]) for c in captions])
+        self.generate_images(captions, output_path="inference_results.png")
 
-def save_image_batch(image_batch, name, output_dir="generated_images"):
-    if not os.path.exists(output_dir):
+
+def save_image_batch(image_batch, output_path):
+    output_dir = os.path.dirname(output_path)
+    if output_dir != '' and not os.path.exists(output_dir):
         os.mkdir(output_dir)
     grid = tv_ut.make_grid(image_batch, normalize=True, padding=0)
-    tv_ut.save_image(grid, os.path.join(output_dir, name))
-
-def train_mode(epochs, batch_size, save_interval, gen_checkpoint, dis_checkpoint):
-    # Check if device is available
-    device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
-    dcgan = CGan_Trainer(device=device, batch_size=batch_size)
-    if gen_checkpoint is not None and dis_checkpoint is not None:
-        dcgan.load_model(gen_checkpoint, dis_checkpoint)
-    dcgan.train(epochs=epochs, save_interval=save_interval)
-
-
-def inference_mode(caption_file, gen_weights_path, dis_weights_path, glove_path="./embeddings/glove.6B.300d.txt"):
-    # Check if device is available
-    device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
-    dcgan = CGan_Trainer(device=device)
-    dcgan.load_model(gen_weights_path, dis_weights_path)
-    dcgan.discriminator.to(device)
-    dcgan.generator.to(device)
-    # Encode captions
-    captions = load_captions_from_textfile(caption_file)
-    glove_model = GloveModel()
-    glove_model.load(data_dir_path=glove_path)
-    captions = torch.Tensor([glove_model.encode_docs([c]) for c in captions])
-    dcgan.generate_images(captions, output_name="inference_results.png")
+    tv_ut.save_image(grid, output_path)
 
 
 if __name__ == '__main__':
@@ -193,8 +184,16 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    # Check if device is available and load checkpoints
+    device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
+    cgan = CGan_Trainer(device=device, batch_size=args.batch_size)
+    if args.gen_checkpoint and args.dis_checkpoint:
+        cgan.load_model(args.gen_checkpoint, args.dis_checkpoint)
+    # Run training or inference
     if args.mode == 'train':
-        train_mode(args.epochs, args.batch_size, args.save_interval, args.gen_checkpoint, args.dis_checkpoint)
+        cgan.train(epochs=args.epochs, save_interval=args.save_interval)
+    elif args.mode == 'inference':
+        cgan.inference(args.inference_caption_file)
     else:
-        inference_mode(args.inference_caption_file, args.gen_checkpoint, args.dis_checkpoint)
+        raise ValueError("--mode must be one of {train, inference}")
 
