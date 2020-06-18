@@ -669,7 +669,7 @@ plt.xlabel("iterations")
 plt.ylabel("Loss")
 plt.legend()
 plt.gcf()
-plt.savefig("dcgan_results/dcgan_training.pdf")
+plt.savefig("dcgan/dcgan_training.pdf")
 plt.show()
 
 ######################################################################
@@ -712,7 +712,7 @@ plt.axis("off")
 plt.title("Fake Images")
 plt.imshow(np.transpose(img_list[-1], (1, 2, 0)))
 plt.gcf()
-plt.savefig("dcgan_results/fake_imgs.pdf")
+plt.savefig("dcgan/fake_imgs.pdf")
 plt.show()
 
 ######################################################################
