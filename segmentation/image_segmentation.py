@@ -2,7 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from skimage import io, color
 import skimage.segmentation as seg
-
+from os.path import join, exists
+import os
 
 def image_show(image, nrows=1, ncols=1, cmap='gray'):
     fig, ax = plt.subplots(nrows=nrows, ncols=ncols, figsize=(14, 14))
@@ -44,7 +45,7 @@ image_show(edges)
 fill_coins = ndi.find_objects(edges)
 """
 
-
+'''
 for part, ind in parts.items():
     print(part)
     for image, name in zip(images, images.files):
@@ -73,3 +74,51 @@ for part, ind in parts.items():
 
             img_name = name.split("/")[-1].split(".")[0]
             plt.imsave('segmented_data/'+part+"/data/"+img_name+"_"+str(x)+".jpg", aseg_rgb, cmap=plt.cm.gray)
+'''
+def read_labelmap(labelfile):
+    with open(labelfile) as lfile:
+        # skip first line
+        next(lfile)
+        labelmap = {}
+        for line in lfile:
+            label, color, _, _ = line.split(':')
+            labelmap[label] = tuple(int(c) for c in color.split(','))
+        return labelmap
+
+
+def extract(image, mask, color):
+    segment = np.zeros(mask.shape,dtype=np.uint8)
+    for i in range(segment.shape[0]):
+        for j in range(segment.shape[1]):
+            segment[i,j,:] = image[i,j,:] if np.all(mask[i,j,:] == np.array(color)) else np.array([0,0,0])
+    return segment
+
+
+def extract_segments(annoation_folder, image_folder, output_dir="segmentation_data"):
+    """
+    Extract the different segments from annotated images and store them in different folders
+    :param annoation_folder: root folder of exported images in SegmentationMask1.1 format i.e. the parent directory of
+    the SegmentationClass directory
+    :param image_folder: folder that contains the corresponding images. Images are expected to be in .jpg format
+    """
+    if not exists(output_dir):
+        os.mkdir(output_dir)
+    labelmap = read_labelmap(join(annoation_folder, "labelmap.txt"))
+    masks = io.ImageCollection(join(annoation_folder,"SegmentationClass", "*.png"))
+    images = io.ImageCollection(join(image_folder, "*.jpg"))
+    counts = {label : 0 for label in labelmap.keys()}
+    for image, mask in zip(images, masks):
+        for label, color in labelmap.items():
+            segment = extract(image, mask, color)
+            # Save segment in corresponding folder
+            segmentfolder = join(output_dir, label)
+            if not np.all(segment == 0):
+                if not exists(segmentfolder):
+                    os.mkdir(segmentfolder)
+                io.imsave(join(segmentfolder, str(counts[label]) + ".jpg"), segment)
+                counts[label] += 1
+
+
+if __name__ == '__main__':
+    extract_segments(annoation_folder="/home/marcel/Uni/Master/3.Semester/DGM/Emoji-Gen/annotations",
+                     image_folder="/home/marcel/Uni/Master/3.Semester/DGM/Emoji-Gen/fb_jpg")

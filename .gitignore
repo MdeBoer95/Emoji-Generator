@@ -1,1 +1,7 @@
 .idea
+*.6B.300d.txt
+saved_models/
+train_output/
+val_output/
+__pycache__/
+images_descriptions.csv
