@@ -159,7 +159,8 @@ if __name__ == '__main__':
             
             
             # Here comes the PCA output at the moment its just noise
-            #fake = netG(noise)
+            #eigenvalues = mappingNet(noise)
+            #fake = get_image_from_ev(eigenvalues)
             fake = torch.randn(b_size, 3, 64, 64, device=device)
             label.fill_(fake_label)
             

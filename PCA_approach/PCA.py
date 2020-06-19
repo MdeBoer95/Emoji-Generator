@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 from PIL import Image
 import numpy as np
 import os
+from skimage import restoration
 
 def load_data(path=os.getcwd()+'/../emoji_data/emojis_jpg_root/all_emojis'):
     emojis_r = np.zeros((64*64, len(listdir(path))))
@@ -97,13 +98,32 @@ def show_eigenface_all_colors(vectors, component):
 
 
 def all_color_pca():
-    components = 30
+    components = 120
     emojis = load_data_all_color()
-    print(emojis.shape)
     e_values, e_vectors,pca = eigenface(emojis, components)
     print(pca.explained_variance_ratio_)
+    #show_eigenface_all_colors(e_vectors,components)
+    
+    # Sanity Test
+    print(emojis.shape)
+    plt.imshow(emojis[:,0].reshape(64,64,3)/255)
+    plt.show()
+    temp = pca.transform(emojis[:,0].reshape(1,-1)/255)
+    
+    mean_face = np.mean(emojis,axis=1)/255
+    print("this now")
+    print(temp)
+    res_arr = mean_face#np.zeros((64*64*3))
+    for i in range(len(temp[0,:])):
+        res_arr += temp[0,i]*e_vectors[i,:]
+    print(np.min(res_arr))
+    print(np.max(res_arr))
+    #temp = pca.inverse_transform(temp.reshape(1,-1))
+    plt.imshow((res_arr.reshape(64,64,3)))
+    plt.show()
 
-    show_eigenface_all_colors(e_vectors,components)
+
+
 
 def show_gray_eigenfaces(vector_gr):
     plt.figure()
