@@ -1,9 +1,9 @@
 from __future__ import print_function, division
 
 import torch.nn as nn
-from models import Discriminator, Generator
+from cgan.models import Discriminator, Generator
 from torch.utils.data import DataLoader
-from dataloading import EmojiCaptionDataset, load_captions_from_textfile
+from cgan.dataloading import EmojiCaptionDataset, load_captions_from_textfile
 import torch
 import torch.optim as optim
 from torchvision import transforms as transforms, utils as tv_ut

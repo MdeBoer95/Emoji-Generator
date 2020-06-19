@@ -5,7 +5,7 @@ from matplotlib.pyplot import imread
 from nltk.tokenize import sent_tokenize
 import re
 import torch
-from embeddings.glove_loader import GloveModel
+from cgan.embeddings.glove_loader import GloveModel
 
 class EmojiCaptionDataset(Dataset):
 
