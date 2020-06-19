@@ -121,4 +121,4 @@ def extract_segments(annoation_folder, image_folder, output_dir="segmentation_da
 
 if __name__ == '__main__':
     extract_segments(annoation_folder="/home/marcel/Uni/Master/3.Semester/DGM/Emoji-Gen/annotations",
-                     image_folder="/home/marcel/Uni/Master/3.Semester/DGM/Emoji-Gen/Emoji-Generator/emoji_data/emojis_jpg_root/fb_jpg")
+                     image_folder="/home/marcel/Uni/Master/3.Semester/DGM/Emoji-Gen/fb_jpg")

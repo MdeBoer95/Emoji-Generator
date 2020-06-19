@@ -3,30 +3,30 @@ from __future__ import print_function, division
 import torch.nn as nn
 from cgan.models import Discriminator, Generator
 from torch.utils.data import DataLoader
-from cgan.dataloading import EmojiCaptionDataset, load_captions_from_textfile
+from cgan.dataloading import load_captions_from_textfile
 import torch
 import torch.optim as optim
-from torchvision import transforms as transforms, utils as tv_ut
+from torchvision import utils as tv_ut
 from torch.utils.data import random_split
 import os
-import argparse
 
-class CGan_Trainer():
-    def __init__(self, csv_file="images_descriptions.csv", batch_size=32, device='cpu'):
+
+class CGanTrainer():
+    def __init__(self, dataset, embedding_dim, batch_size=32, device='cpu'):
         # Input shape
         self.img_rows = 64
         self.img_cols = 64
         self.channels = 3
         self.img_shape = (self.img_rows, self.img_cols, self.channels)
         self.latent_dim = 100
-        self.embedding_dim = 300
+        self.embedding_dim = embedding_dim
         self.device = device
 
         self.discriminator = Discriminator(self.img_shape, self.embedding_dim)
         self.generator = Generator(self.latent_dim, self.embedding_dim, self.channels)
 
         self.batch_size = batch_size
-        self.dataset = EmojiCaptionDataset(csv_file, self.embedding_dim, transform=transforms.ToTensor())
+        self.dataset = dataset
 
         self.optimizer_g = optim.Adam(self.generator.parameters(), lr=0.0005, betas=(0.5, 0.999))
         self.optimizer_d = optim.Adam(self.discriminator.parameters(), lr=0.00005, betas=(0.5, 0.999))
@@ -142,58 +142,4 @@ def save_image_batch(image_batch, output_path):
         os.mkdir(output_dir)
     grid = tv_ut.make_grid(image_batch, normalize=True, padding=0)
     tv_ut.save_image(grid, output_path)
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("--mode",
-                        type=str,
-                        required=True,
-                        help="Train or inference mode")
-    parser.add_argument("--epochs",
-                        default=5000,
-                        type=int,
-                        required=False,
-                        help="Number of epcohs to train")
-    parser.add_argument("--batch_size",
-                        default=32,
-                        type=int,
-                        required=False,
-                        help="Batch size")
-    parser.add_argument("--save_interval",
-                        default=100,
-                        type=int,
-                        required=False,
-                        help="Save the model and intermediate results every x epochs")
-    parser.add_argument("--gen_checkpoint",
-                        default=None,
-                        type=str,
-                        required=False,
-                        help="Load pretrained weights for the generator")
-    parser.add_argument("--dis_checkpoint",
-                        default=None,
-                        type=str,
-                        required=False,
-                        help="Load pretrained weights for the discriminator")
-    parser.add_argument("--inference_caption_file",
-                        default=None,
-                        type=str,
-                        required=False,
-                        help="File with captions to perform inference with a trained model. Must be provided if mode is inference")
-
-    args = parser.parse_args()
-
-    # Check if device is available and load checkpoints
-    device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
-    cgan = CGan_Trainer(device=device, batch_size=args.batch_size)
-    if args.gen_checkpoint and args.dis_checkpoint:
-        cgan.load_model(args.gen_checkpoint, args.dis_checkpoint)
-    # Run training or inference
-    if args.mode == 'train':
-        cgan.train(epochs=args.epochs, save_interval=args.save_interval)
-    elif args.mode == 'inference':
-        cgan.inference(args.inference_caption_file)
-    else:
-        raise ValueError("--mode must be one of {train, inference}")
 

@@ -6,6 +6,10 @@ import csv
 
 
 def preprocess_emoji(dset_path, format='.jpg'):
+    """
+    :param dset_path: path to emoji image directory
+    :return:
+    """
     descriptions_dict = {}
     with open('descriptions.csv', 'r') as descriptionsfile:
         csvreader = csv.reader(descriptionsfile, delimiter=',', quotechar='"')
@@ -39,7 +43,8 @@ def preprocess_emoji(dset_path, format='.jpg'):
     with open("images_descriptions.csv", "w") as img_desc_csv:
         csvwriter = csv.writer(img_desc_csv, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         csvwriter.writerows(csvrows)
-                
+
+
 if __name__ == '__main__':
     if len(sys.argv) == 2:
         print('Preprocessing emoji dataset...')
