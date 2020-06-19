@@ -4,23 +4,28 @@ from os.path import isfile, join
 from matplotlib import pyplot as plt
 from PIL import Image
 import numpy as np
+import os
 
-
-def load_data(path='all_emoji'):
+def load_data(path=os.getcwd()+'/../emoji_data/emojis_root/all_emojis'):
     emojis_r = np.zeros((64*64, len(listdir(path))))
     emojis_g = np.zeros((64*64, len(listdir(path))))
     emojis_b = np.zeros((64*64, len(listdir(path))))
     gray = np.zeros((64*64, len(listdir(path))))
+
+    j=0
     for i in listdir(path):
-        j=0
         img = Image.open(join(path, i))
         img1 = img.convert('L')
         img = np.array(img)
-        emojis_r[:, j] = img[:, :, 0].flatten()
+        if(len(img.shape) == 2):
+            continue
+        
+        emojis_r[:, j] = img[:,:, 0].flatten()
         emojis_g[:, j] = img[:, :, 1].flatten()
         emojis_b[:, j] = img[:, :, 2].flatten()
         gray[:, j] = np.array(img1).flatten()
         j += 1
+        
     return emojis_r, emojis_g, emojis_b, gray
 
 def eigenface(img, n_components):
