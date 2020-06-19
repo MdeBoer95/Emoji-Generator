@@ -97,7 +97,9 @@ def extract(image, mask, color):
 def extract_segments(annoation_folder, image_folder, output_dir="segmentation_data"):
     """
     Extract the different segments from annotated images and store them in different folders
-    :param annoation_folder: the folder that contains the annotated images in Segmentation Mask1.1 format
+    :param annoation_folder: root folder of exported images in SegmentationMask1.1 format i.e. the parent directory of
+    the SegmentationClass directory
+    :param image_folder: folder that contains the corresponding images. Images are expected to be in .jpg format
     """
     if not exists(output_dir):
         os.mkdir(output_dir)
