@@ -183,3 +183,9 @@ if __name__ == '__main__':
     plt.show()
 
 
+
+def all_color_pca():
+    components = 30
+    emojis = load_data_all_color()
+    print(emojis.shape)
+    e_values, e_vectors,pca = eigenface(emojis, components)

@@ -59,7 +59,7 @@ def eigenface(img, n_components):
     pca = pca.fit(img)
     eigen_value = pca.explained_variance_  
     face = pca.components_
-    return eigen_value, face
+    return eigen_value, face,pca
 
 
 ########################################## Newly added Stuff #################################################
@@ -97,10 +97,13 @@ def show_eigenface_all_colors(vectors, component):
 
 
 def all_color_pca():
+    components = 30
     emojis = load_data_all_color()
     print(emojis.shape)
-    e_values, e_vectors = eigenface(emojis, 30)
-    show_eigenface_all_colors(e_vectors,30)
+    e_values, e_vectors,pca = eigenface(emojis, components)
+    print(pca.explained_variance_ratio_)
+
+    show_eigenface_all_colors(e_vectors,components)
 
 def show_gray_eigenfaces(vector_gr):
     plt.figure()
@@ -114,10 +117,10 @@ def show_gray_eigenfaces(vector_gr):
 
 def color_seperated_pca():
     emoji_r, emoji_g, emoji_b, gray = load_data()   
-    value_r, vector_r = eigenface(emoji_r, 20)
-    value_g, vector_g = eigenface(emoji_g, 20)
-    value_b, vector_b = eigenface(emoji_b, 20)
-    value_gr, vector_gr = eigenface(gray, 20)
+    value_r, vector_r,pca = eigenface(emoji_r, 20)
+    value_g, vector_g,pca = eigenface(emoji_g, 20)
+    value_b, vector_b,pca = eigenface(emoji_b, 20)
+    value_gr, vector_gr,pca = eigenface(gray, 20)
 
     show_gray_eigenfaces(vector_gr)
 
@@ -125,8 +128,8 @@ def color_seperated_pca():
 
 
 if __name__ == "__main__":
-    color_seperated_pca()
-    #all_color_pca()
+    #color_seperated_pca()
+    all_color_pca()
 
 
     # vector_gr = vector_gr*255*20
