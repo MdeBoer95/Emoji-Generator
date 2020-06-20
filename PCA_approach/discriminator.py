@@ -18,7 +18,8 @@ import torchvision.utils as vutils
 from os import listdir
 
 # Thinks to keep in mind: have a different learning rate for mapping network!
-# Maybe takeout 
+# Make outputvalues of mapping network between zero and one and make it possible to work with that, square the output of the mapping network!!
+
 workers = 1
 
 # Batch size during training
