@@ -1,3 +1,5 @@
+
+
 import torchvision.transforms as transforms
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,6 +19,38 @@ from os import listdir
 
 # Thinks to keep in mind: have a different learning rate for mapping network!
 # Maybe takeout 
+workers = 1
+
+# Batch size during training
+batch_size = 16
+
+# Spatial size of training images. All images will be resized to this
+#   size using a transformer.
+image_size = 64
+
+# Number of channels in the training images. For color images this is 3
+nc = 3
+
+# Size of z latent vector (i.e. size of generator input)
+nz = 50
+
+# Size of feature maps in generator
+ngf = 64
+
+# Size of feature maps in discriminator
+ndf = 64
+# Number of training epochs
+num_epochs = 100
+# Learning rate for optimizers
+lr = 0.002
+# Beta1 hyperparam for Adam optimizers
+beta1 = 0.5
+
+# Number of GPUs available. Use 0 for CPU mode.
+ngpu = 1
+
+# Number of Eigenvectors that get used
+n_components = 120
 
 class Discriminator(nn.Module):
         def __init__(self, ngpu):
@@ -63,9 +97,11 @@ class MappingNet(nn.Module):
         def __init__(self, ngpu):
             super(MappingNet, self).__init__()
             self.ngpu = ngpu
-            self.lin_1 = nn.Linear(50,40)
-            self.lin_2 = nn.Linear(40,40)
-            self.lin_3 = nn.Linear(40,120)
+            self.lin_1 = nn.Linear(50,45)
+            self.lin_2 = nn.Linear(45,40)
+            self.lin_3 = nn.Linear(40,35)
+            self.lin_4 = nn.Linear(35,30)
+            self.lin_out = nn.Linear(30,120)
             self.act = nn.Tanh()
             
 
@@ -73,7 +109,9 @@ class MappingNet(nn.Module):
            #x = x.view(1,1,-1)
             x = self.act(self.lin_1(x))
             x = self.act(self.lin_2(x))
-            x = self.lin_3(x)
+            x = self.act(self.lin_3(x))
+            x = self.act(self.lin_4(x))
+            x = self.lin_out(x)
 
             return x
 
@@ -85,7 +123,7 @@ class MappingNet(nn.Module):
 
 #path=os.getcwd()+"/training_saves/"
 def load_model(path):
-    model = MappingNet()#CARD_NET()
+    model = MappingNet(1)#CARD_NET()
     model.load_state_dict(torch.load(path))
     return model
 
@@ -104,45 +142,10 @@ def pca_init(n_components):
     return torch.from_numpy(e_vectors),mean_face,pca,
 
 
-if __name__ == '__main__':   
-    workers = 1
 
-    # Batch size during training
-    batch_size = 16
 
-    # Spatial size of training images. All images will be resized to this
-    #   size using a transformer.
-    image_size = 64
-
-    # Number of channels in the training images. For color images this is 3
-    nc = 3
-
-    # Size of z latent vector (i.e. size of generator input)
-    nz = 50
-
-    # Size of feature maps in generator
-    ngf = 64
-
-    # Size of feature maps in discriminator
-    ndf = 64
-
-    # Number of training epochs
-    num_epochs = 20
-
-    # Learning rate for optimizers
-    lr = 0.0002
-
-    # Beta1 hyperparam for Adam optimizers
-    beta1 = 0.5
-
-    # Number of GPUs available. Use 0 for CPU mode.
-    ngpu = 1
-
-    # Number of Eigenvectors that get used
-    n_components = 120
-    
-
-    
+def training():
+      
 
 
     
@@ -187,19 +190,24 @@ if __name__ == '__main__':
     criterion = nn.BCELoss()
     optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
     # Probably needs a different learning rate?
-    optimizerM = optim.Adam(netM.parameters(), lr=lr, betas=(beta1, 0.999))
+    optimizerM = optim.Adam(netM.parameters(), lr=0.002, betas=(beta1, 0.999))
 
     real_label = 1
     fake_label = 0
 
-    D_losses = []
-    G_losses = []
+    D_losses = [0]
+    G_losses = [0]
     img_list = []
     iters = 0
+    D_batchlosses = [0]
+    G_batchlosses = [0]
     for epoch in range(num_epochs):
         # For each batch in the dataloader
+        G_losses_temp = []
+        D_losses_temp = []
+        
         for i, data in enumerate(dataloader, 0):
-
+            
             ############################
             # (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
             ###########################
@@ -246,7 +254,9 @@ if __name__ == '__main__':
             # Add the gradients from the all-real and all-fake batches
             errD = errD_real + errD_fake
             # Update D
-            optimizerD.step()
+            if(D_losses[-1] * 5 >= G_losses[-1]):
+                print("I AM HERE")
+                optimizerD.step()
 
 
             ############################
@@ -265,7 +275,7 @@ if __name__ == '__main__':
             optimizerM.step()
 
             # Output training stats
-            if i % 50 == 0:
+            if i % 15 == 0:
                 print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
                     % (epoch, num_epochs, i, len(dataloader),
                         errD.item(), errG.item(), D_x, D_G_z1, D_G_z2))
@@ -273,6 +283,8 @@ if __name__ == '__main__':
             # Save Losses for plotting later
             G_losses.append(errG.item())
             D_losses.append(errD.item())
+            G_losses_temp.append(errG.item())
+            D_losses_temp.append(errD.item())
 
             # Check how the generator is doing by saving G's output on fixed_noise
             if (iters % 500 == 0) or ((epoch == num_epochs - 1) and (i == len(dataloader) - 1)):
@@ -289,8 +301,12 @@ if __name__ == '__main__':
                 img_list.append(vutils.make_grid(fake.reshape(64,64,64,3), padding=2, normalize=True))
 
             iters += 1
-        print(epoch)
-        torch.save(netM.state_dict(),os.getcwd() + "/training_saves/"+ str(rd.randInt(1000000)) + ".pth")
+        #print("Epoch: " + str(epoch))
+        #print("G_losses: " + str(np.mean(G_losses_temp)))
+        #print("D_losses: " + str(np.mean(D_losses_temp)))
+        D_batchlosses.append(np.mean(D_losses_temp))
+        G_batchlosses.append(np.mean(G_losses_temp))
+        torch.save(netM.state_dict(),os.getcwd() + "/training_saves/"+ str(D_batchlosses[-1])[:10] + "_g" +str(G_batchlosses[-1])[:10] + ".pth")
 
 
     plt.figure(figsize=(10, 5))
@@ -305,22 +321,60 @@ if __name__ == '__main__':
     plt.show()
 
    
-    # Grab a batch of real images from the dataloader
-    real_batch = next(iter(dataloader))
+    # # Grab a batch of real images from the dataloader
+    # real_batch = next(iter(dataloader))
 
-    # Plot the real images
-    plt.figure(figsize=(15, 15))
-    plt.subplot(1, 2, 1)
-    plt.axis("off")
-    plt.title("Real Images")
-    plt.imshow(np.transpose(vutils.make_grid(real_batch[0].to(device)[:64], padding=5, normalize=True).cpu(), (1, 2, 0)))
+    # # Plot the real images
+    # plt.figure(figsize=(15, 15))
+    # plt.subplot(1, 2, 1)
+    # plt.axis("off")
+    # plt.title("Real Images")
+    # plt.imshow(np.transpose(vutils.make_grid(real_batch[0].to(device)[:64], padding=5, normalize=True).cpu(), (1, 2, 0)))
 
-    # Plot the fake images from the last epoch
-    plt.subplot(1, 2, 2)
-    plt.axis("off")
-    plt.title("Fake Images")
-    plt.imshow(np.transpose(img_list[-1], (1, 2, 0)))
-    plt.gcf()
-    #plt.savefig("dcgan/fake_imgs.pdf")
+    # # Plot the fake images from the last epoch
+    # plt.subplot(1, 2, 2)
+    # plt.axis("off")
+    # plt.title("Fake Images")
+    # plt.imshow(np.transpose(img_list[-1], (1, 2, 0)))
+    # plt.gcf()
+    # #plt.savefig("dcgan/fake_imgs.pdf")
+    # plt.show()
+
+
+
+def show_some_pictures(name,n_components,nz):
+    ev,mean_face,pca = pca_init(n_components)
+    fixed_noise = torch.randn(64, nz)
+    net = load_model(os.getcwd() + "/training_saves/" + name + ".pth")
+    net.eval()
+    batched_mean_face = np.zeros((16,mean_face.shape[0]))
+    for i in range(16):
+        batched_mean_face[i,:] = mean_face.copy()
+    
+    output = net(fixed_noise).double()
+    print(output[0,:])
+    fake = torch.from_numpy(np.zeros((64,12288)))
+    fake[:16,:] = torch.from_numpy(batched_mean_face.copy())
+    fake[16:32,:] = torch.from_numpy(batched_mean_face.copy())
+    fake[32:48,:] = torch.from_numpy(batched_mean_face.copy())
+    fake[48:64,:] = torch.from_numpy(batched_mean_face.copy())
+    
+    for i in range(64):
+        fake[i,:] += torch.matmul(output[i,:],ev)
+
+    fake = fake.detach().numpy()
+    plt.figure()
+    for i in range(64):
+        plt.subplot(8,8,i+1)
+        unten = np.min(fake[i,:])
+        oben = np.max(fake[i,:])
+        print(unten)
+        print(oben)
+        plt.imshow((fake[i,:].reshape(64,64,3)- unten)/(oben - unten))
     plt.show()
+
+if __name__ == '__main__':   
+
+    #show_some_pictures("26861",120,50)
+    training()
 
