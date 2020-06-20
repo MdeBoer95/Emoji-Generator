@@ -11,7 +11,12 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.utils.data
 import torchvision.datasets as dset
+import PCA
+import torchvision.utils as vutils
+from os import listdir
 
+# Thinks to keep in mind: have a different learning rate for mapping network!
+# Maybe takeout 
 
 class Discriminator(nn.Module):
         def __init__(self, ngpu):
@@ -41,6 +46,64 @@ class Discriminator(nn.Module):
         def forward(self, input):
             return self.main(input)
 
+
+
+
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
+
+
+
+class MappingNet(nn.Module):
+        def __init__(self, ngpu):
+            super(MappingNet, self).__init__()
+            self.ngpu = ngpu
+            self.lin_1 = nn.Linear(50,40)
+            self.lin_2 = nn.Linear(40,40)
+            self.lin_3 = nn.Linear(40,120)
+            self.act = nn.Tanh()
+            
+
+        def forward(self, x):
+           #x = x.view(1,1,-1)
+            x = self.act(self.lin_1(x))
+            x = self.act(self.lin_2(x))
+            x = self.lin_3(x)
+
+            return x
+
+
+
+
+#################### Helper Methods   ##############################
+
+
+#path=os.getcwd()+"/training_saves/"
+def load_model(path):
+    model = MappingNet()#CARD_NET()
+    model.load_state_dict(torch.load(path))
+    return model
+
+
+
+def pca_init(n_components):
+    emojis = PCA.load_data_all_color()
+    mean_face = np.mean(emojis,axis=1)/255
+    e_values, e_vectors,pca = PCA.eigenface(emojis, n_components)
+
+    # Reconstruct image
+    # res_arr = mean_face 
+    # for i in range(len(temp[0,:])):
+    #    res_arr += temp[0,i]*e_vectors[i,:]
+
+    return torch.from_numpy(e_vectors),mean_face,pca,
+
+
 if __name__ == '__main__':   
     workers = 1
 
@@ -55,7 +118,7 @@ if __name__ == '__main__':
     nc = 3
 
     # Size of z latent vector (i.e. size of generator input)
-    nz = 100
+    nz = 50
 
     # Size of feature maps in generator
     ngf = 64
@@ -75,25 +138,19 @@ if __name__ == '__main__':
     # Number of GPUs available. Use 0 for CPU mode.
     ngpu = 1
 
+    # Number of Eigenvectors that get used
+    n_components = 120
+    
+
+    
 
 
+    
 
-    def weights_init(m):
-        classname = m.__class__.__name__
-        if classname.find('Conv') != -1:
-            nn.init.normal_(m.weight.data, 0.0, 0.02)
-        elif classname.find('BatchNorm') != -1:
-            nn.init.normal_(m.weight.data, 1.0, 0.02)
-            nn.init.constant_(m.bias.data, 0)
-
-
-
-
-
-    dataroot = os.getcwd() + "/../emojis_jpg_root/"
-
+    dataroot = os.getcwd() + "/../emoji_data/emojis_jpg_root"
     device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
-
+    print(device)
+    fixed_noise = torch.randn(64, nz, device=device)
     dataset = dset.ImageFolder(root=dataroot,
                             transform=transforms.Compose([
                                 transforms.Resize(image_size),
@@ -106,14 +163,17 @@ if __name__ == '__main__':
                                             shuffle=True, num_workers=workers)
 
 
+    # Initialize PCA
+    e_vectors,mean_face,pca = pca_init(n_components)
 
-
-
-    
+    batched_mean_face = np.zeros((batch_size,mean_face.shape[0]))
+    for i in range(batch_size):
+        batched_mean_face[i,:] = mean_face.copy()
 
 
 
     netD = Discriminator(ngpu).to(device)
+    netM = MappingNet(ngpu).to(device)
 
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):
@@ -126,12 +186,16 @@ if __name__ == '__main__':
 
     criterion = nn.BCELoss()
     optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
+    # Probably needs a different learning rate?
+    optimizerM = optim.Adam(netM.parameters(), lr=lr, betas=(beta1, 0.999))
 
     real_label = 1
     fake_label = 0
 
     D_losses = []
-
+    G_losses = []
+    img_list = []
+    iters = 0
     for epoch in range(num_epochs):
         # For each batch in the dataloader
         for i, data in enumerate(dataloader, 0):
@@ -155,17 +219,25 @@ if __name__ == '__main__':
 
             ## Train with all-fake batch
             
-            noise = torch.randn(b_size, nz, 1, 1, device=device)
+            noise = torch.randn(b_size, nz, device=device)
             
             
             # Here comes the PCA output at the moment its just noise
-            #eigenvalues = mappingNet(noise)
-            #fake = get_image_from_ev(eigenvalues)
-            fake = torch.randn(b_size, 3, 64, 64, device=device)
+            
+            eigenvalues = netM(noise).double()
+            fake = torch.from_numpy(batched_mean_face[:b_size,:])
+            # Make it a matrix multiplication
+            #for i in range(len(eigenvalues)):
+            #    fake += eigenvalues[i]*e_vectors[i,:]
+            for i in range(b_size):
+                fake[i,:] += torch.matmul(eigenvalues[i,:],e_vectors)
+            #print("Fake shape: " + str(fake.shape))
+            fake = fake.float()
+            #fake = torch.randn(b_size, 3, 64, 64, device=device)
             label.fill_(fake_label)
             
             # Classify all fake batch with D
-            output = netD(fake.detach()).view(-1)
+            output = netD(fake.detach().view(b_size,3,64,64)).view(-1)
             # Calculate D's loss on the all-fake batch
             errD_fake = criterion(output, label)
             # Calculate the gradients for this batch
@@ -176,17 +248,79 @@ if __name__ == '__main__':
             # Update D
             optimizerD.step()
 
+
+            ############################
+            # (2) Update G network: maximize log(D(G(z)))
+            ###########################
+            netM.zero_grad()
+            label.fill_(real_label)  # fake labels are real for generator cost
+            # Since we just updated D, perform another forward pass of all-fake batch through D
+            output = netD(fake.view(b_size,3,64,64)).view(-1)
+            # Calculate G's loss based on this output
+            errG = criterion(output, label)
+            # Calculate gradients for G
+            errG.backward()
+            D_G_z2 = output.mean().item()
+            # Update G
+            optimizerM.step()
+
+            # Output training stats
+            if i % 50 == 0:
+                print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
+                    % (epoch, num_epochs, i, len(dataloader),
+                        errD.item(), errG.item(), D_x, D_G_z1, D_G_z2))
+
+            # Save Losses for plotting later
+            G_losses.append(errG.item())
             D_losses.append(errD.item())
 
+            # Check how the generator is doing by saving G's output on fixed_noise
+            if (iters % 500 == 0) or ((epoch == num_epochs - 1) and (i == len(dataloader) - 1)):
+                with torch.no_grad():
+                    eigenvalues = netM(fixed_noise).detach().cpu().double()
+                    fake = torch.from_numpy(np.zeros((64,12288)))
+                    fake[:16,:] = torch.from_numpy(batched_mean_face.copy())
+                    fake[16:32,:] = torch.from_numpy(batched_mean_face.copy())
+                    fake[32:48,:] = torch.from_numpy(batched_mean_face.copy())
+                    fake[48:64,:] = torch.from_numpy(batched_mean_face.copy())
+                    
+                    for i in range(64):
+                        fake[i,:] += torch.matmul(eigenvalues[i,:],e_vectors)
+                img_list.append(vutils.make_grid(fake.reshape(64,64,64,3), padding=2, normalize=True))
 
-    print(D_losses)
+            iters += 1
+        print(epoch)
+        torch.save(netM.state_dict(),os.getcwd() + "/training_saves/"+ str(rd.randInt(1000000)) + ".pth")
+
+
+    plt.figure(figsize=(10, 5))
+    plt.title("Generator and Discriminator Loss During Training")
+    plt.plot(G_losses, label="G")
     plt.plot(D_losses, label="D")
+    plt.xlabel("iterations")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.gcf()
+    #plt.savefig("dcgan/dcgan_training.pdf")
     plt.show()
 
+   
+    # Grab a batch of real images from the dataloader
+    real_batch = next(iter(dataloader))
 
+    # Plot the real images
+    plt.figure(figsize=(15, 15))
+    plt.subplot(1, 2, 1)
+    plt.axis("off")
+    plt.title("Real Images")
+    plt.imshow(np.transpose(vutils.make_grid(real_batch[0].to(device)[:64], padding=5, normalize=True).cpu(), (1, 2, 0)))
 
-def all_color_pca():
-    components = 30
-    emojis = load_data_all_color()
-    print(emojis.shape)
-    e_values, e_vectors,pca = eigenface(emojis, components)
+    # Plot the fake images from the last epoch
+    plt.subplot(1, 2, 2)
+    plt.axis("off")
+    plt.title("Fake Images")
+    plt.imshow(np.transpose(img_list[-1], (1, 2, 0)))
+    plt.gcf()
+    #plt.savefig("dcgan/fake_imgs.pdf")
+    plt.show()
+

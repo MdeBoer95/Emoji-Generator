@@ -106,22 +106,26 @@ def all_color_pca():
     components = 120
     emojis = load_data_all_color()
     e_values, e_vectors,pca = eigenface(emojis, components)
-    print(pca.explained_variance_ratio_)
+    print(len(pca.explained_variance_ratio_))
+    print(sum(pca.explained_variance_ratio_))
     #show_eigenface_all_colors(e_vectors,components)
     
+    #print(np.min(e_vectors))
+    #print(np.min(np.abs(e_vectors)))
 
 
     ############ Sanity Test ############
 
     # Transform picture to eigenvalues
-    print(emojis.shape)
+    #print(emojis.shape)
     temp = pca.transform(emojis[:,0].reshape(1,-1)/255)
     
     # Get Mean of Pictures and 
     mean_face = np.mean(emojis,axis=1)/255
-    print("this now")
-    print(temp)
-    res_arr = mean_face#np.zeros((64*64*3))
+    #print("this now")
+    #print(temp)
+    # Reconstruct image
+    res_arr = mean_face 
     for i in range(len(temp[0,:])):
         res_arr += temp[0,i]*e_vectors[i,:]
 
@@ -164,9 +168,9 @@ def all_color_pca():
 def smooth_and_sharp(image, alpha=2,fast_mode=False):
     res_arr = restoration.denoise_nl_means(image,fast_mode=fast_mode)
     sharpened = np.zeros((64,64,3))
-        for i in range(3):
-            filter_blurred_f = ndimage.gaussian_filter(res_arr[:,:,i], 1)
-            sharpened[:,:,i] = res_arr[:,:,i] + alpha * (res_arr[:,:,i] - filter_blurred_f)
+    for i in range(3):
+        filter_blurred_f = ndimage.gaussian_filter(res_arr[:,:,i], 1)
+        sharpened[:,:,i] = res_arr[:,:,i] + alpha * (res_arr[:,:,i] - filter_blurred_f)
 
 
 
