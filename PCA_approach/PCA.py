@@ -6,6 +6,8 @@ from PIL import Image
 import numpy as np
 import os
 from skimage import restoration
+import scipy
+from scipy import ndimage
 
 def load_data(path=os.getcwd()+'/../emoji_data/emojis_jpg_root/all_emojis'):
     emojis_r = np.zeros((64*64, len(listdir(path))))
@@ -54,6 +56,7 @@ def show_eigenface(vector_r, vector_g, vector_b, component):
         plt.imshow(img)
     plt.show()
 
+# Works only between 0 and 1
 def eigenface(img, n_components):
     img = img.T / 255
     pca = PCA(n_components)
@@ -98,30 +101,72 @@ def show_eigenface_all_colors(vectors, component):
 
 
 def all_color_pca():
+
+    # PCA + Show Eigenvectors
     components = 120
     emojis = load_data_all_color()
     e_values, e_vectors,pca = eigenface(emojis, components)
     print(pca.explained_variance_ratio_)
     #show_eigenface_all_colors(e_vectors,components)
     
-    # Sanity Test
+
+
+    ############ Sanity Test ############
+
+    # Transform picture to eigenvalues
     print(emojis.shape)
-    plt.imshow(emojis[:,0].reshape(64,64,3)/255)
-    plt.show()
     temp = pca.transform(emojis[:,0].reshape(1,-1)/255)
     
+    # Get Mean of Pictures and 
     mean_face = np.mean(emojis,axis=1)/255
     print("this now")
     print(temp)
     res_arr = mean_face#np.zeros((64*64*3))
     for i in range(len(temp[0,:])):
         res_arr += temp[0,i]*e_vectors[i,:]
+
     print(np.min(res_arr))
     print(np.max(res_arr))
+    print(res_arr[res_arr<0].shape)
+    print(res_arr[res_arr>1].shape)
+    
     #temp = pca.inverse_transform(temp.reshape(1,-1))
-    plt.imshow((res_arr.reshape(64,64,3)))
+    res_arr = res_arr.reshape(64,64,3)
+
+    plt.figure()
+    plt.subplot(1, 4,1)
+    plt.imshow((res_arr))
+    plt.subplot(1, 4,2 )
+    res_arr = restoration.denoise_nl_means(res_arr,fast_mode=False)
+    plt.imshow((res_arr))
+
+    plt.subplot(1,4,3)
+
+    sharpened = np.zeros((64,64,3))
+    for i in range(3):
+        #blurred_f = ndimage.gaussian_filter(res_arr[:,:,i], 3)
+
+        filter_blurred_f = ndimage.gaussian_filter(res_arr[:,:,i], 1)
+
+        alpha = 2
+        sharpened[:,:,i] = res_arr[:,:,i] + alpha * (res_arr[:,:,i] - filter_blurred_f)
+
+    plt.subplot(1,4,3)
+    plt.imshow(sharpened)
+
+    plt.subplot(1,4,4)
+    plt.imshow(emojis[:,0].reshape(64,64,3)/255)
+
+
+
     plt.show()
 
+def smooth_and_sharp(image, alpha=2,fast_mode=False):
+    res_arr = restoration.denoise_nl_means(image,fast_mode=fast_mode)
+    sharpened = np.zeros((64,64,3))
+        for i in range(3):
+            filter_blurred_f = ndimage.gaussian_filter(res_arr[:,:,i], 1)
+            sharpened[:,:,i] = res_arr[:,:,i] + alpha * (res_arr[:,:,i] - filter_blurred_f)
 
 
 
@@ -134,6 +179,7 @@ def show_gray_eigenfaces(vector_gr):
         plt.subplot(4, 5, i+1)
         plt.imshow((vector_gr[i,:].reshape(64,64)+ 0.05)*10)
     plt.show()
+
 
 def color_seperated_pca():
     emoji_r, emoji_g, emoji_b, gray = load_data()   
