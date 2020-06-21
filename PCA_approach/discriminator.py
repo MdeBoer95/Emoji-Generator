@@ -19,6 +19,7 @@ from os import listdir
 
 # Thinks to keep in mind: have a different learning rate for mapping network!
 # Make outputvalues of mapping network between zero and one and make it possible to work with that, square the output of the mapping network!!
+# Maybe first try to autoencode the images and from that on do transferlearning.
 
 workers = 1
 
