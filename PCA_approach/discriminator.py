@@ -18,7 +18,8 @@ from os import listdir
 # Thinks to keep in mind: have a different learning rate for mapping network!
 # Make outputvalues of mapping network between zero and one and make it possible to work with that, square or cubic of  the output of the mapping network!!
 # Maybe first try to autoencode the images and from that on do transferlearning.
-# 
+# Regularize that image should be between 0 and 1
+# multiply EV with mean of eigenvalues for this eigenvector
 
 workers = 1
 
@@ -41,9 +42,9 @@ ngf = 64
 # Size of feature maps in discriminator
 ndf = 64
 # Number of training epochs
-num_epochs = 100
+num_epochs = 300
 # Learning rate for optimizers
-lr = 0.002
+lr = 0.0002
 # Beta1 hyperparam for Adam optimizers
 beta1 = 0.5
 
@@ -191,7 +192,7 @@ def training():
     criterion = nn.BCELoss()
     optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
     # Probably needs a different learning rate?
-    optimizerM = optim.Adam(netM.parameters(), lr=0.002, betas=(beta1, 0.999))
+    optimizerM = optim.Adam(netM.parameters(), lr=0.1, betas=(beta1, 0.999))
 
     real_label = 1
     fake_label = 0
@@ -202,6 +203,8 @@ def training():
     iters = 0
     D_batchlosses = [0]
     G_batchlosses = [0]
+
+    disc_once = False
     for epoch in range(num_epochs):
         # For each batch in the dataloader
         G_losses_temp = []
@@ -228,12 +231,12 @@ def training():
 
             ## Train with all-fake batch
             
-            noise = torch.randn(b_size, nz, device=device)
+            noise = (torch.randn(b_size, nz, device=device)*2)-1
             
             
             # Here comes the PCA output at the moment its just noise
             
-            eigenvalues = (netM(noise).double())
+            eigenvalues = torch.pow(netM(noise),3).double()
             fake = torch.from_numpy(batched_mean_face[:b_size,:])
             # Make it a matrix multiplication
             #for i in range(len(eigenvalues)):
@@ -256,8 +259,9 @@ def training():
             errD = errD_real + errD_fake
             # Update D
             # Only update if D_losses higher than g_losses
-            if(D_losses[-1] * 3 >= G_losses[-1]):
+            if((D_losses[-1]) * 3 >= G_losses[-1] or D_x < 0.7 or not(disc_once)):
                 print("I AM HERE")
+                disc_once = True
                 optimizerD.step()
 
 
@@ -269,7 +273,8 @@ def training():
             # Since we just updated D, perform another forward pass of all-fake batch through D
             output = netD(fake.view(b_size,3,64,64)).view(-1)
             # Calculate G's loss based on this output
-            errG = criterion(output, label)
+            #print(torch.mean(fake).detach().numpy())
+            errG = criterion(output, label) + 0.0005 * (torch.mean(torch.abs(fake)) - 0.5)
             # Calculate gradients for G
             errG.backward()
             D_G_z2 = output.mean().item()
@@ -303,6 +308,8 @@ def training():
                 img_list.append(vutils.make_grid(fake.reshape(64,64,64,3), padding=2, normalize=True))
 
             iters += 1
+
+        disc_once = False
         # Save parameters
         D_batchlosses.append(np.mean(D_losses_temp))
         G_batchlosses.append(np.mean(G_losses_temp))
@@ -361,5 +368,5 @@ def show_some_pictures(name,n_components,nz):
 
 if __name__ == '__main__':   
 
-    #show_some_pictures("26861",120,50)
+    #show_some_pictures("67.9547105_g27.1040809",120,50)
     training()
