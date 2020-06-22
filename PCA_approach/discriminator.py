@@ -233,7 +233,7 @@ def training():
             
             # Here comes the PCA output at the moment its just noise
             
-            eigenvalues = netM(noise).double()
+            eigenvalues = (netM(noise).double())
             fake = torch.from_numpy(batched_mean_face[:b_size,:])
             # Make it a matrix multiplication
             #for i in range(len(eigenvalues)):
