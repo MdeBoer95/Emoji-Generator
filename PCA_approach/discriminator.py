@@ -16,8 +16,9 @@ import torchvision.utils as vutils
 from os import listdir
 
 # Thinks to keep in mind: have a different learning rate for mapping network!
-# Make outputvalues of mapping network between zero and one and make it possible to work with that, square the output of the mapping network!!
+# Make outputvalues of mapping network between zero and one and make it possible to work with that, square or cubic of  the output of the mapping network!!
 # Maybe first try to autoencode the images and from that on do transferlearning.
+# 
 
 workers = 1
 
@@ -254,7 +255,8 @@ def training():
             # Add the gradients from the all-real and all-fake batches
             errD = errD_real + errD_fake
             # Update D
-            if(D_losses[-1] * 5 >= G_losses[-1]):
+            # Only update if D_losses higher than g_losses
+            if(D_losses[-1] * 3 >= G_losses[-1]):
                 print("I AM HERE")
                 optimizerD.step()
 
@@ -301,9 +303,7 @@ def training():
                 img_list.append(vutils.make_grid(fake.reshape(64,64,64,3), padding=2, normalize=True))
 
             iters += 1
-        #print("Epoch: " + str(epoch))
-        #print("G_losses: " + str(np.mean(G_losses_temp)))
-        #print("D_losses: " + str(np.mean(D_losses_temp)))
+        # Save parameters
         D_batchlosses.append(np.mean(D_losses_temp))
         G_batchlosses.append(np.mean(G_losses_temp))
         torch.save(netM.state_dict(),os.getcwd() + "/training_saves/"+ str(D_batchlosses[-1])[:10] + "_g" +str(G_batchlosses[-1])[:10] + ".pth")
@@ -317,41 +317,25 @@ def training():
     plt.ylabel("Loss")
     plt.legend()
     plt.gcf()
-    #plt.savefig("dcgan/dcgan_training.pdf")
     plt.show()
-
-   
-    # # Grab a batch of real images from the dataloader
-    # real_batch = next(iter(dataloader))
-
-    # # Plot the real images
-    # plt.figure(figsize=(15, 15))
-    # plt.subplot(1, 2, 1)
-    # plt.axis("off")
-    # plt.title("Real Images")
-    # plt.imshow(np.transpose(vutils.make_grid(real_batch[0].to(device)[:64], padding=5, normalize=True).cpu(), (1, 2, 0)))
-
-    # # Plot the fake images from the last epoch
-    # plt.subplot(1, 2, 2)
-    # plt.axis("off")
-    # plt.title("Fake Images")
-    # plt.imshow(np.transpose(img_list[-1], (1, 2, 0)))
-    # plt.gcf()
-    # #plt.savefig("dcgan/fake_imgs.pdf")
-    # plt.show()
 
 
 
 def show_some_pictures(name,n_components,nz):
+    # Do PCA
     ev,mean_face,pca = pca_init(n_components)
     fixed_noise = torch.randn(64, nz)
+    # Get Mapping Net
     net = load_model(os.getcwd() + "/training_saves/" + name + ".pth")
     net.eval()
+    # Get Mean face
     batched_mean_face = np.zeros((16,mean_face.shape[0]))
     for i in range(16):
         batched_mean_face[i,:] = mean_face.copy()
     
+    # Get eigenvalues from mapping network
     output = net(fixed_noise).double()
+    # Init fakes with mean face
     print(output[0,:])
     fake = torch.from_numpy(np.zeros((64,12288)))
     fake[:16,:] = torch.from_numpy(batched_mean_face.copy())
@@ -359,9 +343,11 @@ def show_some_pictures(name,n_components,nz):
     fake[32:48,:] = torch.from_numpy(batched_mean_face.copy())
     fake[48:64,:] = torch.from_numpy(batched_mean_face.copy())
     
+    # Linear combination of Eigenvectors
     for i in range(64):
         fake[i,:] += torch.matmul(output[i,:],ev)
 
+    # Show the fakes
     fake = fake.detach().numpy()
     plt.figure()
     for i in range(64):
