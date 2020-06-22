@@ -18,7 +18,10 @@ import torchvision.utils as vutils
 from os import listdir
 
 # Thinks to keep in mind: have a different learning rate for mapping network!
-# Make outputvalues of mapping network between zero and one and make it possible to work with that, square the output of the mapping network!!
+# Make outputvalues of mapping network between zero and one and make it possible to work with that, square, cubic the output of the mapping network!! softmax without normalization
+# Plot the mean and std of each eigenvalue for all emojis
+# change mapping architecture
+# regularize output, so that resulting picture is between 0 and 1
 
 workers = 1
 
@@ -41,7 +44,7 @@ ngf = 64
 # Size of feature maps in discriminator
 ndf = 64
 # Number of training epochs
-num_epochs = 100
+num_epochs = 600
 # Learning rate for optimizers
 lr = 0.002
 # Beta1 hyperparam for Adam optimizers
@@ -98,7 +101,7 @@ class MappingNet(nn.Module):
         def __init__(self, ngpu):
             super(MappingNet, self).__init__()
             self.ngpu = ngpu
-            self.lin_1 = nn.Linear(50,45)
+            self.lin_1 = nn.Linear(nz,45)
             self.lin_2 = nn.Linear(45,40)
             self.lin_3 = nn.Linear(40,35)
             self.lin_4 = nn.Linear(35,30)
@@ -140,7 +143,7 @@ def pca_init(n_components):
     # for i in range(len(temp[0,:])):
     #    res_arr += temp[0,i]*e_vectors[i,:]
 
-    return torch.from_numpy(e_vectors),mean_face,pca,
+    return torch.from_numpy(e_vectors),mean_face,pca
 
 
 
@@ -191,7 +194,7 @@ def training():
     criterion = nn.BCELoss()
     optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
     # Probably needs a different learning rate?
-    optimizerM = optim.Adam(netM.parameters(), lr=0.002, betas=(beta1, 0.999))
+    optimizerM = optim.Adam(netM.parameters(), lr=0.02, betas=(beta1, 0.999))
 
     real_label = 1
     fake_label = 0
@@ -235,14 +238,9 @@ def training():
             
             eigenvalues = netM(noise).double()
             fake = torch.from_numpy(batched_mean_face[:b_size,:])
-            # Make it a matrix multiplication
-            #for i in range(len(eigenvalues)):
-            #    fake += eigenvalues[i]*e_vectors[i,:]
             for i in range(b_size):
                 fake[i,:] += torch.matmul(eigenvalues[i,:],e_vectors)
-            #print("Fake shape: " + str(fake.shape))
             fake = fake.float()
-            #fake = torch.randn(b_size, 3, 64, 64, device=device)
             label.fill_(fake_label)
             
             # Classify all fake batch with D
@@ -255,6 +253,7 @@ def training():
             # Add the gradients from the all-real and all-fake batches
             errD = errD_real + errD_fake
             # Update D
+            # Skip D update if G has to train more
             if(D_losses[-1] * 5 >= G_losses[-1]):
                 print("I AM HERE")
                 optimizerD.step()
@@ -302,9 +301,8 @@ def training():
                 img_list.append(vutils.make_grid(fake.reshape(64,64,64,3), padding=2, normalize=True))
 
             iters += 1
-        #print("Epoch: " + str(epoch))
-        #print("G_losses: " + str(np.mean(G_losses_temp)))
-        #print("D_losses: " + str(np.mean(D_losses_temp)))
+        
+        # Save parameters
         D_batchlosses.append(np.mean(D_losses_temp))
         G_batchlosses.append(np.mean(G_losses_temp))
         torch.save(netM.state_dict(),os.getcwd() + "/training_saves/"+ str(D_batchlosses[-1])[:10] + "_g" +str(G_batchlosses[-1])[:10] + ".pth")
@@ -376,6 +374,6 @@ def show_some_pictures(name,n_components,nz):
 
 if __name__ == '__main__':   
 
-    #show_some_pictures("26861",120,50)
+    #show_some_pictures("0.06194418_g43.3635731",120,50)
     training()
 
