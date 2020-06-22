@@ -119,7 +119,14 @@ def all_color_pca():
     # Transform picture to eigenvalues
     #print(emojis.shape)
     temp = pca.transform(emojis[:,0].reshape(1,-1)/255)
-    
+    print(temp)
+    plt.figure(figsize=(10, 5))
+    plt.title("Generator and Discriminator Loss During Training")
+    plt.plot(temp.reshape(-1), label="G")
+    plt.legend()
+    plt.gcf()
+    plt.show()
+
     # Get Mean of Pictures and 
     mean_face = np.mean(emojis,axis=1)/255
     #print("this now")
