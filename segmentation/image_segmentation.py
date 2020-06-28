@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from skimage import io, color
 import skimage.segmentation as seg
-from os.path import join, exists
+from os.path import join, exists, basename
 import os
 
 def image_show(image, nrows=1, ncols=1, cmap='gray'):
@@ -106,7 +106,8 @@ def extract_segments(annoation_folder, image_folder, output_dir="segmentation_da
     labelmap = read_labelmap(join(annoation_folder, "labelmap.txt"))
     masks = io.ImageCollection(join(annoation_folder,"SegmentationClass", "*.png"))
     images = io.ImageCollection(join(image_folder, "*.jpg"))
-    counts = {label : 0 for label in labelmap.keys()}
+    count = 0
+    #counts = {label : 0 for label in labelmap.keys()}
     for image, mask in zip(images, masks):
         for label, color in labelmap.items():
             segment = extract(image, mask, color)
@@ -115,8 +116,8 @@ def extract_segments(annoation_folder, image_folder, output_dir="segmentation_da
             if not np.all(segment == 0):
                 if not exists(segmentfolder):
                     os.mkdir(segmentfolder)
-                io.imsave(join(segmentfolder, str(counts[label]) + ".jpg"), segment)
-                counts[label] += 1
+                io.imsave(join(segmentfolder, basename(images.files[count])), segment)
+        count += 1
 
 
 if __name__ == '__main__':
