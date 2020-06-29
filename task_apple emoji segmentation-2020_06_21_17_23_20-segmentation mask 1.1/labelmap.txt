@@ -1,8 +1,0 @@
-# label:color_rgb:parts:actions
-tears:176,112,160::
-background:0,0,0::
-eyes:48,240,32::
-mouth:48,112,160::
-hands:176,240,32::
-eyebrows:176,112,32::
-ears:48,112,32::
