@@ -1,0 +1,25 @@
+<!doctype html>
+<title>{% block title %}{% endblock %} - Flaskr</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<nav>
+  <h1>Emoji Generator</h1>
+</nav>
+<section class="content">
+  <header>
+    <h2>CGAN</h2>
+  </header>
+    <form method="post">
+      <label for="caption">Input a Caption to generate an Emoji</label>
+      <input name="caption" id="caption">
+      <input type="submit" name="generate" value="Generate Emoji">
+    </form>
+    {% if pca_image %}
+      <h1>Generated Emojis</h1>
+      <h2>PCA-GAN</h2>
+      <img src="{{ url_for('static', filename=pca_image)}}">
+      <h2>DCGAN</h2>
+      <img src="{{ url_for('static', filename=pca_image)}}">
+      <h2>SEGMENT-GAN</h2>
+      <img src="{{ url_for('static', filename=pca_image)}}">
+    {% endif %}
+</section>

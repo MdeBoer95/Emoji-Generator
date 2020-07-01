@@ -9,7 +9,7 @@ import torch.optim as optim
 from torchvision import utils as tv_ut
 from torch.utils.data import random_split
 import os
-
+from cgan.embeddings.glove_loader import GloveModel
 
 class CGanTrainer():
     def __init__(self, dataset, embedding_dim, batch_size=32, device='cpu'):
@@ -109,9 +109,9 @@ class CGanTrainer():
                     if not os.path.exists(real_imgs_path):
                         save_image_batch(val_imgs, output_path=real_imgs_path)
 
-    def load_model(self, gen_weights_path, dis_weights_path):
-        self.generator.load_state_dict(torch.load(gen_weights_path))
-        self.discriminator.load_state_dict(torch.load(dis_weights_path))
+    def load_model(self, gen_weights_path, dis_weights_path, map_location=None):
+        self.generator.load_state_dict(torch.load(gen_weights_path, map_location=map_location))
+        self.discriminator.load_state_dict(torch.load(dis_weights_path, map_location=map_location))
 
     def save_model(self, gen_weights_path, dis_weights_path):
         torch.save(self.generator.state_dict(), gen_weights_path)
@@ -127,13 +127,19 @@ class CGanTrainer():
             save_image_batch(output.detach(), output_path)
         self.generator.train()
 
-    def inference(self, caption_file):
+    def inference(self, captions, output_path="inference_results.png", glove_model=None):
         self.discriminator.to(self.device)
         self.generator.to(self.device)
-        captions = load_captions_from_textfile(caption_file)
-        glove_model = self.dataset.glove_model
+        captions = None
+        if type(captions) is list:
+            captions = captions
+        else:
+            captions = load_captions_from_textfile(captions)
+        if not glove_model:
+            glove_model = GloveModel()
+            glove_model.load("cgan/embeddings/glove.6B.300d.txt")
         captions = torch.Tensor([glove_model.encode_docs([c]) for c in captions])
-        self.generate_images(captions, output_path="inference_results.png")
+        self.generate_images(captions, output_path=output_path)
 
 
 def save_image_batch(image_batch, output_path):
@@ -142,4 +148,11 @@ def save_image_batch(image_batch, output_path):
         os.mkdir(output_dir)
     grid = tv_ut.make_grid(image_batch, normalize=True, padding=0)
     tv_ut.save_image(grid, output_path)
+
+
+def five():
+    return 5
+
+def five_string():
+    return "Five"
 
