@@ -1,36 +1,73 @@
-<!doctype html>
-<title>{% block title %}{% endblock %} - Flaskr</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-<nav>
-  <h1>Emoji Generator</h1>
-</nav>
-<section class="content">
-  <header>
-      <h1>CGAN</h1>
-  </header>
-  <form method="post">
-    <label for="caption">Input a Caption to generate an Emoji</label>
-    <input name="caption" id="caption">
-    <input type="submit" name="cgan_gen" value="Generate Emoji">
+<!DOCTYPE html>
+<html>
+<title>Emoji Generator</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="{{ url_for('static', filename='w3.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='w3-theme-teal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='font-awesome.min.css') }}">
+<body>
+
+<!-- Header -->
+<header class="w3-container w3-theme w3-padding" id="myHeader">
+<div class="w3-center">
+  <h1 class="w3-xxxlarge w3-animate-bottom">Emoji Generator</h1>
+  </div>
+</header>
+
+<div class="w3-row-padding w3-center w3-margin-top">
+<div class="w3-half">
+  <div class="w3-card w3-container" style="min-height:460px">
+  <h3>CGAN</h3><br>
+  <form class="w3-container w3-card-4" method="post">
+    <div class="w3-section">
+      <input name="caption" id="caption" class="w3-input">
+      <label for="caption">Input a Caption to generate an Emoji</label>
+    </div>
+    <input type=submit class="w3-button w3-theme" name="cgan_gen" value="Generate Emoji">
   </form>
   {% if cgan_image %}
     <h3>Generated Emoji</h3>
-    <img src="{{ url_for('static', filename=cgan_image)}}">
+    <div class="w3-card">
+      <img src="{{ url_for('static', filename=cgan_image)}}">
+    </div>
   {% endif %}
+  </div>
+</div>
 
-  <header>
-      <h1>Non conditional GANs</h1>
-  </header>
-  <form method="post">
-    <input type="submit" name="non_conditional_gen" value="Generate Emojis">
+<div class="w3-half">
+  <div class="w3-card w3-container" style="min-height:460px">
+  <h3>Unconditional Gans</h3><br>
+  <form class="w3-container w3-card-4" method="post">
+    <input type=submit class="w3-button w3-theme" name="non_conditional_gen" value="Generate Emojis">
   </form>
   {% if dcgan_image %}
     <h3>Generated Emoji</h3>
+    <div class="w3-third w3-card">
     <h4>DC-GAN</h4>
     <img src="{{ url_for('static', filename=dcgan_image)}}">
+    </div>
+    <div class="w3-third w3-card">
     <h4>PCA-GAN</h4>
     <img src="{{ url_for('static', filename=dcgan_image)}}">
+    </div>
+    <div class="w3-third w3-card">
     <h4>Segment-GAN</h4>
     <img src="{{ url_for('static', filename=dcgan_image)}}">
+    </div>
   {% endif %}
-</section>
+  </div>
+</div>
+</div>
+
+<!-- Footer -->
+<footer class="w3-container w3-theme-dark w3-padding-16" style="position:absolute;width: 100%;bottom:0">
+  <div style="position:relative;bottom:55px;" class="w3-tooltip w3-right">
+    <span class="w3-text w3-theme-light w3-padding">Go To Top</span>
+    <a class="w3-text-white" href="#myHeader"><span class="w3-xlarge">
+    <i class="fa fa-chevron-circle-up"></i></span></a>
+  </div>
+</footer>
+
+</body>
+</html>
