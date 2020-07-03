@@ -6,20 +6,31 @@
 </nav>
 <section class="content">
   <header>
-    <h2>CGAN</h2>
+      <h1>CGAN</h1>
   </header>
-    <form method="post">
-      <label for="caption">Input a Caption to generate an Emoji</label>
-      <input name="caption" id="caption">
-      <input type="submit" name="generate" value="Generate Emoji">
-    </form>
-    {% if pca_image %}
-      <h1>Generated Emojis</h1>
-      <h2>PCA-GAN</h2>
-      <img src="{{ url_for('static', filename=pca_image)}}">
-      <h2>DCGAN</h2>
-      <img src="{{ url_for('static', filename=pca_image)}}">
-      <h2>SEGMENT-GAN</h2>
-      <img src="{{ url_for('static', filename=pca_image)}}">
-    {% endif %}
+  <form method="post">
+    <label for="caption">Input a Caption to generate an Emoji</label>
+    <input name="caption" id="caption">
+    <input type="submit" name="cgan_gen" value="Generate Emoji">
+  </form>
+  {% if cgan_image %}
+    <h3>Generated Emoji</h3>
+    <img src="{{ url_for('static', filename=cgan_image)}}">
+  {% endif %}
+
+  <header>
+      <h1>Non conditional GANs</h1>
+  </header>
+  <form method="post">
+    <input type="submit" name="non_conditional_gen" value="Generate Emojis">
+  </form>
+  {% if dcgan_image %}
+    <h3>Generated Emoji</h3>
+    <h4>DC-GAN</h4>
+    <img src="{{ url_for('static', filename=dcgan_image)}}">
+    <h4>PCA-GAN</h4>
+    <img src="{{ url_for('static', filename=dcgan_image)}}">
+    <h4>Segment-GAN</h4>
+    <img src="{{ url_for('static', filename=dcgan_image)}}">
+  {% endif %}
 </section>

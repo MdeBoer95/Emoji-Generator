@@ -127,10 +127,9 @@ class CGanTrainer():
             save_image_batch(output.detach(), output_path)
         self.generator.train()
 
-    def inference(self, captions, output_path="inference_results.png", glove_model=None):
+    def inference(self, captions, output_path="inference_results.png", glove_model=None, x_in=None):
         self.discriminator.to(self.device)
         self.generator.to(self.device)
-        captions = None
         if type(captions) is list:
             captions = captions
         else:
@@ -139,7 +138,7 @@ class CGanTrainer():
             glove_model = GloveModel()
             glove_model.load("cgan/embeddings/glove.6B.300d.txt")
         captions = torch.Tensor([glove_model.encode_docs([c]) for c in captions])
-        self.generate_images(captions, output_path=output_path)
+        self.generate_images(captions, output_path=output_path, x_in=x_in)
 
 
 def save_image_batch(image_batch, output_path):
