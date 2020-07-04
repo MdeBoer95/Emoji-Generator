@@ -1,5 +1,6 @@
 from PIL import Image, ImageDraw
 import random
+import numpy as np
 
 from cgan.dataloading import EmojiFaceSegments
 
@@ -29,12 +30,16 @@ def combine_nogan(parts_list):
     for apart in parts_list:
         curr_parts = list(map(lambda x: x[0], filter(lambda x: x[1]==apart, dataset.data)))
         # Pick random part
-        pick = Image.fromarray(random.choice(curr_parts))
+        pick = random.choice(curr_parts).copy()
+        #a = list(filter(lambda x: np.all(x), pick < 40))
+        # TODO: More efficient impl. using map and filter
+        for row in range(pick.shape[0]):
+            for col in range(pick.shape[1]):
+                if np.all(pick[row][col] < 30):
+                    pick[row][col] = [0,0,0]
 
-        pick.save("testing.jpg", "JPEG")
-
+        pick = Image.fromarray(pick)
         pick = pick.convert("RGBA")
-
         pixdata = pick.load()
 
         width, height = pick.size
@@ -43,7 +48,7 @@ def combine_nogan(parts_list):
                 if pixdata[x, y] == (0, 0, 0, 255):
                     pixdata[x, y] = (0, 0, 0, 0)
 
-        pick.save("testing.png", "PNG")
+        pick.save("testing_"+str(apart)+".png", "PNG")
         pick.load()
 
         # Paste parts and save pic
@@ -64,4 +69,4 @@ def create_background():
 
 
 # labels = {"ears": 1, "eyebrows": 2, "eyes": 3, "hands": 4, "mouth": 5, "tears": 6}
-combine_nogan([2, 3, 5])
+combine_nogan([1, 2, 3, 4, 5, 6])
