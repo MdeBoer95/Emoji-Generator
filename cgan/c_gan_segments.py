@@ -7,9 +7,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--mode",
-                        default='train',
+                        default='inference',
                         type=str,
-                        required=True,
+                        required=False,
                         help="Train or inference mode") # TODO implement inference
     parser.add_argument("--epochs",
                         default=5000,
@@ -27,12 +27,12 @@ if __name__ == '__main__':
                         required=False,
                         help="Save the model and intermediate results every x epochs")
     parser.add_argument("--gen_checkpoint",
-                        default=None,
+                        default="saved_models/gen_weights516.pt",
                         type=str,
                         required=False,
                         help="Load pretrained weights for the generator")
     parser.add_argument("--dis_checkpoint",
-                        default=None,
+                        default="saved_models/dis_weights516.pt",
                         type=str,
                         required=False,
                         help="Load pretrained weights for the discriminator")
@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
     # Check if device is available and load checkpoints
     device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
-    dataset_path = "/home/marcel/Uni/Master/3.Semester/DGM/Emoji-Gen/Emoji-Generator/segmentation/segmentation_data"
+    dataset_path = "../segmentation/segmentation_data"
     dataset = EmojiFaceSegments(dataset_path)
     embedding_dim = len(dataset.labels)
     cgan = CGanTrainer(dataset=dataset, embedding_dim=embedding_dim, device=device, batch_size=args.batch_size)
@@ -51,8 +51,8 @@ if __name__ == '__main__':
     if args.mode == 'train':
         cgan.train(epochs=args.epochs, save_interval=args.save_interval)
     elif args.mode == 'inference':
-        raise NotImplementedError("Inference not implemented yet")
-        cgan.inference(args.inference_caption_file)
+        #raise NotImplementedError("Inference not implemented yet")
+        cgan.inference([1,2,3,4,5,6])
     else:
         raise ValueError("--mode must be one of {train, inference}")
 

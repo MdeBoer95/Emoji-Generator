@@ -5,3 +5,4 @@ train_output/
 val_output/
 __pycache__/
 images_descriptions.csv
+*.pyc

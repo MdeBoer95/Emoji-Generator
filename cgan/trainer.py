@@ -1,6 +1,8 @@
 from __future__ import print_function, division
 
 import torch.nn as nn
+import torchvision
+
 from cgan.models import Discriminator, Generator
 from torch.utils.data import DataLoader
 from cgan.dataloading import load_captions_from_textfile
@@ -9,7 +11,8 @@ import torch.optim as optim
 from torchvision import utils as tv_ut
 from torch.utils.data import random_split
 import os
-
+import numpy as np
+from cgan.embeddings.glove_loader import GloveModel
 
 class CGanTrainer():
     def __init__(self, dataset, embedding_dim, batch_size=32, device='cpu'):
@@ -109,37 +112,66 @@ class CGanTrainer():
                     if not os.path.exists(real_imgs_path):
                         save_image_batch(val_imgs, output_path=real_imgs_path)
 
-    def load_model(self, gen_weights_path, dis_weights_path):
-        self.generator.load_state_dict(torch.load(gen_weights_path))
-        self.discriminator.load_state_dict(torch.load(dis_weights_path))
+    def load_model(self, gen_weights_path, dis_weights_path, map_location=None):
+        self.generator.load_state_dict(torch.load(gen_weights_path, map_location=map_location))
+        self.discriminator.load_state_dict(torch.load(dis_weights_path, map_location=map_location))
 
     def save_model(self, gen_weights_path, dis_weights_path):
         torch.save(self.generator.state_dict(), gen_weights_path)
         torch.save(self.discriminator.state_dict(), dis_weights_path)
 
-    def generate_images(self, cond, output_path, x_in=None):
+    def generate_images(self, cond, output_path, x_in=None, grid=True):
         if x_in is None:
             x_in = torch.randn(len(cond), 1, self.latent_dim).to(self.device)
         cond = cond.to(self.device)
         self.generator.eval()
         with torch.no_grad():
             output = self.generator(x_in, cond)
-            save_image_batch(output.detach(), output_path)
-        self.generator.train()
+            save_image_batch(output.detach(), output_path, grid=grid)
+        #self.generator.train()
 
-    def inference(self, caption_file):
+    def inference(self, captions, output_path="inference_results/", glove_model=None, x_in=None):
         self.discriminator.to(self.device)
         self.generator.to(self.device)
-        captions = load_captions_from_textfile(caption_file)
-        glove_model = self.dataset.glove_model
+        if type(captions) is list:
+            captions = captions
+        else:
+            captions = load_captions_from_textfile(captions)
+        """
+        if not glove_model:
+            glove_model = GloveModel()
+            glove_model.load("cgan/embeddings/glove.6B.300d.txt")
         captions = torch.Tensor([glove_model.encode_docs([c]) for c in captions])
-        self.generate_images(captions, output_path="inference_results.png")
+        """
+        onehots = []
+        for label in captions:
+            onehot = np.zeros((1, len(captions)))
+            onehot[0, label - 1] = 1
+            onehots.append(onehot)
+        captions = torch.Tensor(onehots)
+        self.generate_images(captions, output_path=output_path, x_in=x_in, grid=False)
 
 
-def save_image_batch(image_batch, output_path):
+def save_image_batch(image_batch, output_path, grid=True):
     output_dir = os.path.dirname(output_path)
     if output_dir != '' and not os.path.exists(output_dir):
         os.mkdir(output_dir)
-    grid = tv_ut.make_grid(image_batch, normalize=True, padding=0)
-    tv_ut.save_image(grid, output_path)
+    if grid:
+        grid = tv_ut.make_grid(image_batch, normalize=True, padding=0)
+        tv_ut.save_image(grid, output_path)
+    else:
+        NAMES = ["ears/", "eyebrows/", "eyes/", "hands/", "mouth/", "tears/"]
+        for i in range(image_batch.size(0)):
+            name = NAMES[i]
+            name_dir = os.path.dirname(output_path+name)
+            if name_dir != '' and not os.path.exists(name_dir):
+                os.mkdir(name_dir)
+            torchvision.utils.save_image(image_batch[i, :, :, :], output_path+name+'{}.png'.format(i+1))
+
+
+def five():
+    return 5
+
+def five_string():
+    return "Five"
 
