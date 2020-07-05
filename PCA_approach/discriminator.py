@@ -377,11 +377,13 @@ def show_some_pictures(name,n_components,nz):
 
 
 
-def gui_init(save_name,n_components=120,nz=50):
+def gui_init(save_name,seed=0,n_components=120,nz=50):
     ev,mean_face,pca = pca_init(n_components)
+    if(seed):
+        torch.manual_seed(seed)
     fixed_noise = torch.randn(64, nz)
     # Get Mapping Net
-    net = load_model(os.getcwd() + "/training_saves/" + save_name + ".pth")
+    net = load_model(os.getcwd() + "/inference_saves/" + save_name + ".pth")
     net.eval()
 
     batched_mean_face = np.zeros((16,mean_face.shape[0]))
@@ -405,9 +407,9 @@ def gui_init(save_name,n_components=120,nz=50):
     for i in range(64):
         unten = np.min(fake[i,:])
         oben = np.max(fake[i,:])
-        print(unten)
-        print(oben)
-        print(np.std(fake[i,:]))
+        #print(unten)
+        #print(oben)
+        #print(np.std(fake[i,:]))
         #b = (fake[i,:].reshape(64,64,3)- np.mean(fake[i,:])+0.5)
         #print(b[b> 1].size)
         
