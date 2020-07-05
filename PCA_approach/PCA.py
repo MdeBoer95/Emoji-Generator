@@ -100,6 +100,19 @@ def show_eigenface_all_colors(vectors, component):
 
 
 
+def eigenvalue_range(data,pca,components):
+    a = np.zeros((components,453))
+    for i in range(data.shape[1]):
+        a[:,i] = pca.transform(data[:,i].reshape(1,-1)/255)
+    
+    b = np.mean(a,axis=1)
+    c = np.std(a,axis=1)
+    #print(b.shape)
+    #print(b)
+    #print(c)
+    return c
+
+
 def all_color_pca():
 
     # PCA + Show Eigenvectors
@@ -113,7 +126,9 @@ def all_color_pca():
     #print(np.min(e_vectors))
     #print(np.min(np.abs(e_vectors)))
 
+    eigenvalue_range(emojis,pca,components)
 
+    return 
     ############ Sanity Test ############
 
     # Transform picture to eigenvalues

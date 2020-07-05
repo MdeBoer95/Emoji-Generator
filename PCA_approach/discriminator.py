@@ -15,11 +15,15 @@ import PCA
 import torchvision.utils as vutils
 from os import listdir
 
+
 # Thinks to keep in mind: have a different learning rate for mapping network!
 # Make outputvalues of mapping network between zero and one and make it possible to work with that, square or cubic of  the output of the mapping network!!
 # Maybe first try to autoencode the images and from that on do transferlearning.
 # Regularize that image should be between 0 and 1
 # multiply EV with mean of eigenvalues for this eigenvector
+# Implement loading old parameter saves for further training
+# Dot multiply mean face, with eigenvectors. and get mean of eigenvalues
+# normalize Noise, 0 1
 
 workers = 1
 
@@ -104,7 +108,7 @@ class MappingNet(nn.Module):
             self.lin_3 = nn.Linear(40,35)
             self.lin_4 = nn.Linear(35,30)
             self.lin_out = nn.Linear(30,120)
-            self.act = nn.Tanh()
+            self.act = nn.LeakyReLU()#nn.Tanh()
             
 
         def forward(self, x):
@@ -136,17 +140,18 @@ def pca_init(n_components):
     mean_face = np.mean(emojis,axis=1)/255
     e_values, e_vectors,pca = PCA.eigenface(emojis, n_components)
 
-    # Reconstruct image
-    # res_arr = mean_face 
-    # for i in range(len(temp[0,:])):
-    #    res_arr += temp[0,i]*e_vectors[i,:]
+    
+    std_vec = PCA.eigenvalue_range(emojis,pca,n_components)
+    
+    for i in range(n_components):
+        e_vectors[i,:] = std_vec[i] * e_vectors[i,:]
 
-    return torch.from_numpy(e_vectors),mean_face,pca,
+    return torch.from_numpy(e_vectors),mean_face,pca
 
 
 
 
-def training():
+def training(old_save=None):
       
 
 
@@ -170,6 +175,7 @@ def training():
 
     # Initialize PCA
     e_vectors,mean_face,pca = pca_init(n_components)
+    
 
     batched_mean_face = np.zeros((batch_size,mean_face.shape[0]))
     for i in range(batch_size):
@@ -235,12 +241,10 @@ def training():
             
             
             # Here comes the PCA output at the moment its just noise
-            
-            eigenvalues = torch.pow(netM(noise),3).double()
+            a = netM(noise)
+            eigenvalues = a.double() #torch.sign(a)*torch.pow(a,2).double()##############################################
             fake = torch.from_numpy(batched_mean_face[:b_size,:])
-            # Make it a matrix multiplication
-            #for i in range(len(eigenvalues)):
-            #    fake += eigenvalues[i]*e_vectors[i,:]
+
             for i in range(b_size):
                 fake[i,:] += torch.matmul(eigenvalues[i,:],e_vectors)
             #print("Fake shape: " + str(fake.shape))
@@ -259,7 +263,7 @@ def training():
             errD = errD_real + errD_fake
             # Update D
             # Only update if D_losses higher than g_losses
-            if((D_losses[-1]) * 3 >= G_losses[-1] or D_x < 0.7 or not(disc_once)):
+            if((D_losses[-1]) * 3 >= G_losses[-1] or D_x < 0.7 or (epoch%5 == 0 and not(disc_once))):
                 print("I AM HERE")
                 disc_once = True
                 optimizerD.step()
@@ -274,7 +278,7 @@ def training():
             output = netD(fake.view(b_size,3,64,64)).view(-1)
             # Calculate G's loss based on this output
             #print(torch.mean(fake).detach().numpy())
-            errG = criterion(output, label) + 0.0005 * (torch.mean(torch.abs(fake)) - 0.5)
+            errG = criterion(output, label) + 0.001 * (torch.mean(torch.abs(fake)) - 0.5)
             # Calculate gradients for G
             errG.backward()
             D_G_z2 = output.mean().item()
@@ -363,10 +367,56 @@ def show_some_pictures(name,n_components,nz):
         oben = np.max(fake[i,:])
         print(unten)
         print(oben)
-        plt.imshow((fake[i,:].reshape(64,64,3)- unten)/(oben - unten))
+        print(np.std(fake[i,:]))
+        #b = (fake[i,:].reshape(64,64,3)- np.mean(fake[i,:])+0.5)
+        #print(b[b> 1].size)
+        
+
+        plt.imshow((fake[i,:].reshape(64,64,3)- np.mean(fake[i,:])+0.5))
     plt.show()
+
+
+
+def gui_init(save_name,n_components=120,nz=50):
+    ev,mean_face,pca = pca_init(n_components)
+    fixed_noise = torch.randn(64, nz)
+    # Get Mapping Net
+    net = load_model(os.getcwd() + "/training_saves/" + save_name + ".pth")
+    net.eval()
+
+    batched_mean_face = np.zeros((16,mean_face.shape[0]))
+    for i in range(16):
+        batched_mean_face[i,:] = mean_face.copy()
+
+    output = net(fixed_noise).double()
+    fake = torch.from_numpy(np.zeros((64,12288)))
+    fake[:16,:] = torch.from_numpy(batched_mean_face.copy())
+    fake[16:32,:] = torch.from_numpy(batched_mean_face.copy())
+    fake[32:48,:] = torch.from_numpy(batched_mean_face.copy())
+    fake[48:64,:] = torch.from_numpy(batched_mean_face.copy())
+
+    # Linear combination of Eigenvectors
+    for i in range(64):
+        fake[i,:] += torch.matmul(output[i,:],ev)
+    fake = fake.detach().numpy()
+
+
+    list_of_images = []
+    for i in range(64):
+        unten = np.min(fake[i,:])
+        oben = np.max(fake[i,:])
+        print(unten)
+        print(oben)
+        print(np.std(fake[i,:]))
+        #b = (fake[i,:].reshape(64,64,3)- np.mean(fake[i,:])+0.5)
+        #print(b[b> 1].size)
+        
+        list_of_images.append((fake[i,:].reshape(64,64,3) - unten)/(oben-unten))
+    return list_of_images
+
+
 
 if __name__ == '__main__':   
 
-    #show_some_pictures("67.9547105_g27.1040809",120,50)
+    #show_some_pictures("0.00422660_g5.78255901",120,50)
     training()
