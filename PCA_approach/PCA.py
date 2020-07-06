@@ -1,3 +1,4 @@
+import cv2
 from sklearn.decomposition import PCA
 from os import listdir
 from os.path import isfile, join
@@ -191,7 +192,7 @@ def smooth_and_sharp(image, alpha=2,fast_mode=False):
     res_arr = restoration.denoise_nl_means(image,fast_mode=fast_mode)
     sharpened = np.zeros((64,64,3))
     for i in range(3):
-        filter_blurred_f = ndimage.gaussian_filter(res_arr[:,:,i], 1)
+        filter_blurred_f = cv2.medianBlur(res_arr[:,:,i], 5)
         sharpened[:,:,i] = res_arr[:,:,i] + alpha * (res_arr[:,:,i] - filter_blurred_f)
     return sharpened
 

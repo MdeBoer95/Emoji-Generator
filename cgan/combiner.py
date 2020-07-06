@@ -1,8 +1,10 @@
+import cv2
 from PIL import Image, ImageDraw
 import random
 import numpy as np
 
 from cgan.dataloading import EmojiFaceSegments
+from PCA_approach.PCA import smooth_and_sharp
 
 
 def combine_parts(parts_list, nogan=True):
@@ -28,7 +30,6 @@ def combine_parts(parts_list, nogan=True):
             for col in range(pick.shape[1]):
                 if np.all(pick[row][col] < thresh):
                     pick[row][col] = [0,0,0]
-
         pick = Image.fromarray((pick).astype(np.uint8))
         pick = pick.convert("RGBA")
         pixdata = pick.load()
@@ -47,7 +48,13 @@ def combine_parts(parts_list, nogan=True):
             background.paste(pick, mask=pick.split()[3])  # 3 is the alpha channel
         except IndexError:  # No alpha channel found
             background.paste(pick)
-    background.save("test_paste.jpg", quality=100)
+
+    img_asfloat = (np.array(background)/255).astype(np.float32)
+    img_smooth = cv2.medianBlur(img_asfloat, 3) # Median blur only
+    #img_smooth = smooth_and_sharp(img_asfloat, alpha=0.2)  # Non-local means
+    #img_smooth = img_asfloat   # Keep original
+    img = Image.fromarray((img_smooth*255).astype(np.uint8))
+    img.save("test_paste.jpg", quality=100)
     print("Saved.")
 
 
@@ -60,4 +67,6 @@ def create_background():
 
 
 # labels = {"ears": 1, "eyebrows": 2, "eyes": 3, "hands": 4, "mouth": 5, "tears": 6}
-combine_parts([1, 2, 3, 4, 5, 6], nogan=False)
+# Warning: The ordering of the elements means that the first will be pasted first and the others on top of it
+#random.seed(2) # For debugging
+combine_parts([1, 5, 3, 2, 4, 6], nogan=True)
