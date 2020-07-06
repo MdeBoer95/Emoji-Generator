@@ -193,6 +193,7 @@ def smooth_and_sharp(image, alpha=2,fast_mode=False):
     for i in range(3):
         filter_blurred_f = ndimage.gaussian_filter(res_arr[:,:,i], 1)
         sharpened[:,:,i] = res_arr[:,:,i] + alpha * (res_arr[:,:,i] - filter_blurred_f)
+    return sharpened
 
 
 
