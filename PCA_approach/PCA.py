@@ -70,7 +70,7 @@ def eigenface(img, n_components):
 ########################################## Newly added Stuff #################################################
 
 
-def load_data_all_color(path=os.getcwd()+'/../emoji_data/emojis_jpg_root/all_emojis'):
+def load_data_all_color(path=os.getcwd()+'/emoji_data/emojis_jpg_root/all_emojis'):
     emojis = np.zeros((64*64*3, len(listdir(path))))
 
     j=0

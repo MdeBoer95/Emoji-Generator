@@ -1,7 +1,6 @@
 from __future__ import print_function, division
 
 import torch.nn as nn
-import torchvision
 
 from cgan.models import Discriminator, Generator
 from torch.utils.data import DataLoader
@@ -13,6 +12,7 @@ from torch.utils.data import random_split
 import os
 import numpy as np
 from cgan.embeddings.glove_loader import GloveModel
+from cgan.combiner import combine_parts
 
 class CGanTrainer():
     def __init__(self, dataset, embedding_dim, batch_size=32, device='cpu'):
@@ -128,28 +128,36 @@ class CGanTrainer():
         with torch.no_grad():
             output = self.generator(x_in, cond)
             save_image_batch(output.detach(), output_path, grid=grid)
-        #self.generator.train()
+        self.generator.train()
 
-    def inference(self, captions, output_path="inference_results/", glove_model=None, x_in=None):
+    def inference(self, captions, output_path="inference_results/", glove_model=None, x_in=None, mode='word'):
         self.discriminator.to(self.device)
         self.generator.to(self.device)
         if type(captions) is list:
             captions = captions
         else:
             captions = load_captions_from_textfile(captions)
-        """
-        if not glove_model:
-            glove_model = GloveModel()
-            glove_model.load("cgan/embeddings/glove.6B.300d.txt")
-        captions = torch.Tensor([glove_model.encode_docs([c]) for c in captions])
-        """
-        onehots = []
-        for label in captions:
-            onehot = np.zeros((1, len(captions)))
-            onehot[0, label - 1] = 1
-            onehots.append(onehot)
-        captions = torch.Tensor(onehots)
-        self.generate_images(captions, output_path=output_path, x_in=x_in, grid=False)
+
+        if mode == 'word':
+            if not glove_model:
+                glove_model = GloveModel()
+                glove_model.load("cgan/embeddings/glove.6B.300d.txt")
+            captions = torch.Tensor([glove_model.encode_docs([c]) for c in captions])
+            grid = True
+            self.generate_images(captions, output_path=output_path, x_in=x_in, grid=grid)
+
+        elif mode == 'segment':
+            onehots = []
+            for label in captions:
+                onehot = np.zeros((1, len(captions)))
+                onehot[0, label - 1] = 1
+                onehots.append(onehot)
+            captions = torch.Tensor(onehots)
+            grid = False
+            self.generate_images(captions, output_path="inference_results/", x_in=x_in, grid=grid)
+            combine_parts([1, 2, 3, 4, 5, 6], nogan=False, output_path=output_path)
+        else:
+            raise ValueError("mode must be one of {word, segments}")
 
 
 def save_image_batch(image_batch, output_path, grid=True):
@@ -166,7 +174,7 @@ def save_image_batch(image_batch, output_path, grid=True):
             name_dir = os.path.dirname(output_path+name)
             if name_dir != '' and not os.path.exists(name_dir):
                 os.mkdir(name_dir)
-            torchvision.utils.save_image(image_batch[i, :, :, :], output_path+name+'{}.png'.format(i+1))
+            tv_ut.save_image(image_batch[i, :, :, :], output_path+name+'{}.png'.format(i+1))
 
 
 def five():

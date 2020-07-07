@@ -51,8 +51,7 @@ if __name__ == '__main__':
     if args.mode == 'train':
         cgan.train(epochs=args.epochs, save_interval=args.save_interval)
     elif args.mode == 'inference':
-        #raise NotImplementedError("Inference not implemented yet")
-        cgan.inference([1,2,3,4,5,6])
+        cgan.inference([1,2,3,4,5,6], mode='segment')
     else:
         raise ValueError("--mode must be one of {train, inference}")
 

@@ -11,7 +11,7 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.utils.data
 import torchvision.datasets as dset
-import PCA
+import PCA_approach.PCA as PCA
 import torchvision.utils as vutils
 from os import listdir
 
@@ -377,13 +377,17 @@ def show_some_pictures(name,n_components,nz):
 
 
 
-def gui_init(save_name,seed=0,n_components=120,nz=50):
-    ev,mean_face,pca = pca_init(n_components)
+def gui_init(save_path, seed=0, n_components=120, nz=50, pca_init=None):
+    if not pca_init:
+        ev,mean_face,pca = pca_init(n_components)
+    else:
+        ev, mean_face, pca = pca_init
+
     if(seed):
         torch.manual_seed(seed)
     fixed_noise = torch.randn(64, nz)
     # Get Mapping Net
-    net = load_model(os.getcwd() + "/inference_saves/" + save_name + ".pth")
+    net = load_model(save_path)
     net.eval()
 
     batched_mean_face = np.zeros((16,mean_face.shape[0]))

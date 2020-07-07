@@ -4,11 +4,10 @@ import random
 import numpy as np
 
 from cgan.dataloading import EmojiFaceSegments
-from PCA_approach.PCA import smooth_and_sharp
 
 
-def combine_parts(parts_list, nogan=True):
-    dataset_path = "../segmentation/segmentation_data" if nogan else "inference_results"
+def combine_parts(parts_list, nogan=True, output_path="test_paste.jpg"):
+    dataset_path = "segmentation/segmentation_data" if nogan else "inference_results"
 
     # Create background
     background = create_background()
@@ -54,7 +53,7 @@ def combine_parts(parts_list, nogan=True):
     #img_smooth = smooth_and_sharp(img_asfloat, alpha=0.2)  # Non-local means
     #img_smooth = img_asfloat   # Keep original
     img = Image.fromarray((img_smooth*255).astype(np.uint8))
-    img.save("test_paste.jpg", quality=100)
+    img.save(output_path, quality=100)
     print("Saved.")
 
 
@@ -69,4 +68,3 @@ def create_background():
 # labels = {"ears": 1, "eyebrows": 2, "eyes": 3, "hands": 4, "mouth": 5, "tears": 6}
 # Warning: The ordering of the elements means that the first will be pasted first and the others on top of it
 #random.seed(2) # For debugging
-combine_parts([1, 5, 3, 2, 4, 6], nogan=True)
