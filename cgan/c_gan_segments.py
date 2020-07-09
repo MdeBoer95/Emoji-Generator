@@ -51,7 +51,7 @@ if __name__ == '__main__':
     if args.mode == 'train':
         cgan.train(epochs=args.epochs, save_interval=args.save_interval)
     elif args.mode == 'inference':
-        cgan.inference([2, 3, 5], mode='segment')
+        cgan.inference([1, 2, 3, 4, 5, 6], mode='segment')  # Create an image for each class
     else:
         raise ValueError("--mode must be one of {train, inference}")
 

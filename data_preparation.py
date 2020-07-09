@@ -46,6 +46,11 @@ def move_to_one_folder(output_dir, emoji_dirs):
 
 
 def convert_jpg(path = "emojis_root/all_emojis"):
+    """
+    Converts transparent png emoji images from path into .jpg with black background and saves them.
+    :param path:
+    :return:
+    """
     onlyfiles = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
     for p in onlyfiles:
         png = Image.open(path+"/"+p)

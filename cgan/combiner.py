@@ -63,7 +63,7 @@ def combine_parts(parts_list, nogan=True, output_path="test_paste.jpg"):
                 if pixdata[x, y] == (0, 0, 0, 255):
                     pixdata[x, y] = (0, 0, 0, 0)
 
-        pick.save("testing_" + str(apart) + ".png", "PNG")
+        #pick.save("testing_" + str(apart) + ".png", "PNG")
         pick.load()
 
         # Paste parts and save pic
