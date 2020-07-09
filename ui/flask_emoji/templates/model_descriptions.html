@@ -29,6 +29,31 @@
 </div>
 </div>
 </div>
+<div class="w3-col w3-center w3-margin-top">
+<div class="w3-center w3-margin-top">
+  <div class="w3-container">
+  <div class="w3-card w3-container" style="min-height:320px">
+  <h3 id="SegmentGAN">Segment-GAN</h3><br>
+    <p>
+      For the Segment-GAN, the training data contains manually-annotated emoji parts as images. These parts fall into six classes: "ears", "eyebrows", "eyes", "hands", "mouth", and "tears".
+      We build a Conditional GAN similar to CGAN. The difference is that we use one-hot encodings of the six classes as conditions instead of natural language text. The Conditional GAN is queried for each part specified by the user and then all the generated parts are pasted onto an image template which consists of a yellow circle on a black background.
+    </p>
+  </div>
+</div>
+</div>
+</div>
+<div class="w3-col w3-center w3-margin-top">
+<div class="w3-center w3-margin-top">
+  <div class="w3-container">
+  <div class="w3-card w3-container" style="min-height:320px">
+  <h3 id="NOGAN">Random Segments</h3><br>
+    <p>
+      There is no DGM behind that. We just pick a random image from our hand-annotated emoji parts for each user input. We then paste all the parts onto a background image, thus "generating" a new emoji.
+    </p>
+  </div>
+</div>
+</div>
+</div>
 <footer></footer>
 
 </body>

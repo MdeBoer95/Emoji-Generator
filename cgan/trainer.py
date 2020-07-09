@@ -1,5 +1,7 @@
 from __future__ import print_function, division
 
+import datetime
+
 import torch.nn as nn
 
 from cgan.models import Discriminator, Generator
@@ -12,7 +14,8 @@ from torch.utils.data import random_split
 import os
 import numpy as np
 from cgan.embeddings.glove_loader import GloveModel
-from cgan.combiner import combine_parts
+from cgan.combiner import combine_parts, sort_parts
+
 
 class CGanTrainer():
     def __init__(self, dataset, embedding_dim, batch_size=32, device='cpu'):
@@ -120,14 +123,14 @@ class CGanTrainer():
         torch.save(self.generator.state_dict(), gen_weights_path)
         torch.save(self.discriminator.state_dict(), dis_weights_path)
 
-    def generate_images(self, cond, output_path, x_in=None, grid=True):
+    def generate_images(self, cond, output_path, x_in=None, grid=True, names=["ears/", "eyebrows/", "eyes/", "hands/", "mouth/", "tears/"]):
         if x_in is None:
             x_in = torch.randn(len(cond), 1, self.latent_dim).to(self.device)
         cond = cond.to(self.device)
         self.generator.eval()
         with torch.no_grad():
             output = self.generator(x_in, cond)
-            save_image_batch(output.detach(), output_path, grid=grid)
+            save_image_batch(output.detach(), output_path, grid=grid, names=names)
         self.generator.train()
 
     def inference(self, captions, output_path="inference_results/", glove_model=None, x_in=None, mode='word'):
@@ -147,20 +150,22 @@ class CGanTrainer():
             self.generate_images(captions, output_path=output_path, x_in=x_in, grid=grid)
 
         elif mode == 'segment':
+            captions = sort_parts(captions)
+            captions_names = [{1: "ears/", 2: "eyebrows/", 3: "eyes/", 4: "hands/", 5: "mouth/", 6: "tears/"}[capt] for capt in captions]
             onehots = []
             for label in captions:
-                onehot = np.zeros((1, len(captions)))
+                onehot = np.zeros((1, self.embedding_dim))   # Dimension of one-hot vectors should be always num_classes
                 onehot[0, label - 1] = 1
                 onehots.append(onehot)
-            captions = torch.Tensor(onehots)
+            oh_captions = torch.Tensor(onehots)
             grid = False
-            self.generate_images(captions, output_path="inference_results/", x_in=x_in, grid=grid)
-            combine_parts([1, 2, 3, 4, 5, 6], nogan=False, output_path=output_path)
+            self.generate_images(oh_captions, output_path="inference_results/", x_in=x_in, grid=grid, names=captions_names)
+            combine_parts(captions, nogan=False, output_path=output_path)
         else:
             raise ValueError("mode must be one of {word, segments}")
 
 
-def save_image_batch(image_batch, output_path, grid=True):
+def save_image_batch(image_batch, output_path, grid=True, names=["ears/", "eyebrows/", "eyes/", "hands/", "mouth/", "tears/"]):
     output_dir = os.path.dirname(output_path)
     if output_dir != '' and not os.path.exists(output_dir):
         os.mkdir(output_dir)
@@ -168,13 +173,12 @@ def save_image_batch(image_batch, output_path, grid=True):
         grid = tv_ut.make_grid(image_batch, normalize=True, padding=0)
         tv_ut.save_image(grid, output_path)
     else:
-        NAMES = ["ears/", "eyebrows/", "eyes/", "hands/", "mouth/", "tears/"]
         for i in range(image_batch.size(0)):
-            name = NAMES[i]
+            name = names[i]
             name_dir = os.path.dirname(output_path+name)
             if name_dir != '' and not os.path.exists(name_dir):
                 os.mkdir(name_dir)
-            tv_ut.save_image(image_batch[i, :, :, :], output_path+name+'{}.png'.format(i+1))
+            tv_ut.save_image(image_batch[i, :, :, :], output_path+name+'{}.png'.format(datetime.datetime.now().strftime("%f")))
 
 
 def five():
