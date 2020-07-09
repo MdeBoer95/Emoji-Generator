@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='w3.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='w3-theme-black.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='font-awesome.min.css') }}">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 <body>
 
 <!-- Header -->
@@ -76,7 +77,17 @@
     <label>Hands</label>
     <br><br>
   </div>
-    <input type=submit class="w3-button w3-theme" name="segmentgan_gen" value="Generate Emojis">
+    <input id="submit_parts" type=submit class="w3-button w3-theme" name="segmentgan_gen" value="Generate Emojis">
+    <script>
+      var checkboxes = $("input[type='checkbox']"),
+      submitButt = $("input[id='submit_parts']");
+      submitButt.attr("disabled", true)
+
+      checkboxes.click(function() {
+      submitButt.attr("disabled", !checkboxes.is(":checked"));
+      });
+    </script>
+
   </form>
   {% if segmentgan_image %}
     <h3>Generated Emojis</h3>
