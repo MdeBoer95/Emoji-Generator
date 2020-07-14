@@ -2,6 +2,7 @@
 Create new emojis using machine learning
 
 ## Requirements
+At least python 3.6 (has been tested on 3.6 and 3.8) 
 * Flask 1.1.2
 * torch 1.5.1
 * torchvision 0.6.1
