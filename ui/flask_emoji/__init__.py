@@ -3,6 +3,7 @@ from PCA_approach.discriminator import pca_init
 
 from flask import Flask
 
+
 def create_app(test_config=None):
     app = Flask(__name__)
     app.config['EmojiFolder'] = "static"
@@ -10,7 +11,7 @@ def create_app(test_config=None):
     glove_model = GloveModel()
     glove_model.load("cgan/embeddings/glove.6B.300d.txt")
     app.config['GloveModel'] = glove_model
-    # PCA
+    # Pre load PCA
     n_components = 120
     ev, mean_face, pca = pca_init(n_components)
     app.config['PCA.init'] = (ev, mean_face, pca)
