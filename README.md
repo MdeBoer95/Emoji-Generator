@@ -2,10 +2,22 @@
 Create new emojis using machine learning
 
 ## Requirements
+* Flask 1.1.2
+* torch 1.5.1
+* torchvision 0.6.1
+* sklearn 0.0
+* matplotlib 3.2.2
+* nlkt 3.5
+
+You can install them via pip by using the ```requirements.txt``` file. 
+```
+pip install -r requirements.txt
+```
 
 The CGAN with word embeddings requires to download the 300dimensional pre-trained glove embeddings file from https://nlp.stanford.edu/projects/glove/
 and to put it into the ```cgan/embeddings``` folder.
 ## UI
+![Emoji Generator](UIPreview.png)
 Our UI is a web-based interface which runs on a flask server.
 Here is how you can start it from the root folder of this project:
 ```

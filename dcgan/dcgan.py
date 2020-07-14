@@ -129,7 +129,6 @@ import torchvision.utils as vutils
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from IPython.display import HTML
 from torch import tanh
 import torch.nn.functional as F
 from cgan.trainer import save_image_batch
@@ -743,7 +742,7 @@ if __name__ == '__main__':
     ims = [[plt.imshow(np.transpose(i, (1, 2, 0)), animated=True)] for i in img_list]
     ani = animation.ArtistAnimation(fig, ims, interval=1000, repeat_delay=1000, blit=True)
 
-    HTML(ani.to_jshtml())
+    #HTML(ani.to_jshtml())
 
     ######################################################################
     # **Real Images vs. Fake Images**
